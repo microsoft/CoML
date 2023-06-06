@@ -1,0 +1,17 @@
+click
+langchain
+numpy
+orjson
+pandas
+peewee
+python-dotenv
+scikit_learn
+tiktoken
+xgboost
+
+##Dev
+flake8
+pre-commit
+black
+isort
+pytest

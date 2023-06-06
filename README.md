@@ -1,33 +1,55 @@
-# Project
+# MLCopilot
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+MLCopilot is a tool to help you find the best models/hyperparametes for your task. It uses Large Language Models(LLMs) to suggest models and hyperparameters based on your task description and previous experiments.
 
-As the maintainer of this project, please make a few updates:
+![](assets/demo.gif)
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+## Quickstart
 
-## Contributing
+1. [Get an OpenAI API Key](#get-an-openai-api-key)
+2. [Install requirements](#install-requirements)
+3. [Run](#run)
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
+### Get an OpenAI API Key
 
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
+1. Create an account [here](https://beta.openai.com/signup)
+2. Create an API key [here](https://beta.openai.com/account/api-keys)
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+### Install requirements
 
-## Trademarks
+0. Clone this repo: `git clone REPO_URL; cd mlcopilot`
+1. Put assets/mlcopilot.db in your home directory: `cp assets/mlcopilot.db ~/.mlcopilot/mlcopilot.db`
+2. Install Python 3.8 or higher
+3. Build: `hatch build`. (May need to install [hatch](https://hatch.pypa.io/latest/install/) first)
+4. Install: `pip install ./dist/*.whl`
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft 
-trademarks or logos is subject to and must follow 
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
-Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
-Any use of third-party trademarks or logos are subject to those third-party's policies.
+### Run
+
+Command line: `mlcopilot`
+
+
+### API Usage
+
+```python
+from mlcopilot.suggest import suggest
+
+space = import_space("YOUR_SPACE_ID")
+task_desc = "YOUR_TASK_DESCRIPTION_FOR_NEW_TASK"
+suggest_configs, knowledge = suggest(space, task_desc)
+```
+
+
+
+## Citation
+If you find this work useful in your method, you can cite the paper as below:
+
+    @article{zhang2023mlcopilot,
+        title={MLCopilot: Unleashing the Power of Large Language Models in Solving Machine Learning Tasks},
+        author={Zhang, Lei and Zhang, Yuge and Ren, Kan and Li, Dongsheng and Yang, Yuqing},
+        journal={arXiv preprint arXiv:2304.14979},
+        year={2023}
+    }
+
+## License
+
+The entire codebase is under [MIT license](LICENSE).
