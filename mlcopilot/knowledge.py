@@ -6,7 +6,7 @@ from langchain.prompts import FewShotPromptTemplate, PromptTemplate
 from langchain.prompts.example_selector import LengthBasedExampleSelector
 
 from mlcopilot.constants import *
-from mlcopilot.experience import gen_experience_per_task
+from mlcopilot.experience import gen_experience
 from mlcopilot.orm import Knowledge, Solution, Space, Task, database_proxy
 from mlcopilot.surrogate_utils import evaluate_configs
 from mlcopilot.utils import get_llm, parse_configs
@@ -140,10 +140,7 @@ def post_validation(
         print("Knowledge already exists.")
         return knowledge
     quantile_infos = orjson.loads(space.quantile_info)
-    examples = [
-        gen_experience_per_task(space, task)
-        for task in Task.select().join(Solution).where(Solution.space == space)
-    ]
+    examples = gen_experience(space)
     best_score = float("-inf")
     knowledge = None
     for _ in range(3):

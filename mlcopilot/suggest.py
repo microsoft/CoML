@@ -6,7 +6,7 @@ from langchain.prompts.example_selector import LengthBasedExampleSelector
 from peewee import fn
 
 from mlcopilot.constants import *
-from mlcopilot.experience import gen_experience_per_task
+from mlcopilot.experience import gen_experience
 from mlcopilot.knowledge import get_knowledge
 from mlcopilot.orm import Knowledge, Solution, Space, Task, database_proxy
 from mlcopilot.space import import_space, print_space
@@ -71,14 +71,8 @@ def suggest(space: Space, task_desc: str) -> Tuple[Dict[str, Any], Union[str, No
     knowledge = get_knowledge(space)
     task_desc = f"""Task: {task_desc}"""
 
-    tasks_select = (
-        Task.select()
-        .join(Solution)
-        .where(Solution.space == space)
-        .distinct()
-        .order_by(fn.cosine_similarity(task_desc, Task.embedding).desc())
-    )  # TODO SQL groupby
-    examples = [gen_experience_per_task(space, task) for task in tasks_select]
+    examples = gen_experience(space, task_desc)
+
     llm = get_llm("suggest")()
     quantile_infos = orjson.loads(space.quantile_info)
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 from typing import Any, Dict, List, Optional
 
 import langchain
@@ -7,6 +8,7 @@ import numpy as np
 import orjson
 import pandas as pd
 from langchain.cache import InMemoryCache
+from peewee import ModelSelect, fn
 
 from mlcopilot.constants import *
 from mlcopilot.orm import Knowledge, Solution, Space, Task, database_proxy
@@ -308,3 +310,115 @@ def _gen_experience_demos(space: Space, task: Task) -> str:
         ]
     )
     return demos
+
+
+def _get_best_relevant_solutions(space: Space, task_desc: str) -> ModelSelect:
+    """
+    Get the best relevant solution for a task.
+    The relevance is measured by cosine similarity between task description embeddings, which affects the order of results.
+
+    Parameters
+    ----------
+    space: Space
+        The space.
+    task_desc: str
+        The task description.
+
+    Returns
+    -------
+    ModelSelect
+        The best relevant solution.
+    """
+    SolutionAlias = Solution.alias()
+    subquery = (
+        SolutionAlias.select(
+            SolutionAlias.demo,
+            Task.task_id,
+            Task.desc,
+            Task.embedding,
+            fn.RANK()
+            .over(
+                partition_by=[SolutionAlias.space, SolutionAlias.task],
+                order_by=[SolutionAlias.metric.desc()],
+            )
+            .alias("rnk"),
+        )
+        .where(SolutionAlias.space == space)
+        .join(Task, on=(SolutionAlias.task == Task.task_id))
+        .order_by(fn.cosine_similarity(task_desc, Task.embedding).desc())
+        .alias("subq")
+    )
+    query = Solution.select(subquery.c.task_id, subquery.c.demo, subquery.c.desc).from_(
+        subquery
+    )
+    return query
+
+
+def _get_best_solutions(space: Space) -> ModelSelect:
+    """
+    Get the best solution for each task.
+
+    Parameters
+    ----------
+    space: Space
+        The space.
+
+    Returns
+    -------
+    ModelSelect
+        The best solution for each task.
+    """
+    SolutionAlias = Solution.alias()
+    subquery = (
+        SolutionAlias.select(
+            SolutionAlias.demo,
+            Task.task_id,
+            Task.desc,
+            Task.embedding,
+            fn.RANK()
+            .over(
+                partition_by=[SolutionAlias.space, SolutionAlias.task],
+                order_by=[SolutionAlias.metric.desc()],
+            )
+            .alias("rnk"),
+        )
+        .where(SolutionAlias.space == space)
+        .join(Task, on=(SolutionAlias.task == Task.task_id))
+        .alias("subq")
+    )
+    query = Solution.select(subquery.c.task_id, subquery.c.demo, subquery.c.desc).from_(
+        subquery
+    )
+    return query
+
+
+def gen_experience(space: Space, task_desc: Optional[str] = None) -> List[str]:
+    """
+    Generate experience content from space and optional task description.
+
+    Parameters
+    ----------
+    space: Space
+        The space.
+    task_desc
+        The task description.
+
+    Returns
+    -------
+    List[str]
+        The experience content.
+    """
+    if task_desc is None:
+        query = _get_best_solutions(space)
+    else:
+        query = _get_best_relevant_solutions(space, task_desc)
+    examples = OrderedDict()
+
+    for solution in query:
+        if solution.task_id not in examples:
+            examples[solution.task_id] = [solution.desc]
+        if len(examples[solution.task_id]) <= TOP_K:
+            examples[solution.task_id].append(
+                f"Configuration {len(examples[solution.task_id])}: {solution.demo}"
+            )
+    return ["\n".join(e) for e in examples.values()]

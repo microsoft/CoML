@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+from peewee import fn
 
 from mlcopilot.constants import TOP_K
 from mlcopilot.experience import (
@@ -8,11 +9,12 @@ from mlcopilot.experience import (
     _ingest_space,
     _ingest_task,
     canonicalize_config,
+    gen_experience,
     gen_experience_per_task,
     get_quantile_stat,
     ingest_experience,
 )
-from mlcopilot.orm import Task
+from mlcopilot.orm import Solution, Task
 from mlcopilot.utils import set_llms
 
 from .llm import MockEmbeddingModel, MockKnowledgeLLM
@@ -99,3 +101,21 @@ def test_gen_experience_per_task():
     experience_per_task = gen_experience_per_task(space, task)
     assert isinstance(experience_per_task, str)
     return experience_per_task
+
+
+def test_gen_experience():
+    task_desc = "test task description"
+    space, _ = test_ingest_space()
+
+    test_ingest_task()
+
+    tasks_select = (
+        Task.select()
+        .join(Solution)
+        .where(Solution.space == space)
+        .distinct()
+        .order_by(fn.cosine_similarity(task_desc, Task.embedding).desc())
+    )  # TODO SQL groupby
+    examples_gt = [gen_experience_per_task(space, task) for task in tasks_select]
+    examples = gen_experience(space, task_desc)
+    assert examples == examples_gt
