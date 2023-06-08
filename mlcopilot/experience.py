@@ -336,7 +336,7 @@ def _get_best_relevant_solutions(space: Space, task_desc: str) -> ModelSelect:
             Task.task_id,
             Task.desc,
             Task.embedding,
-            fn.RANK()
+            fn.ROW_NUMBER()
             .over(
                 partition_by=[SolutionAlias.space, SolutionAlias.task],
                 order_by=[SolutionAlias.metric.desc()],
@@ -348,8 +348,10 @@ def _get_best_relevant_solutions(space: Space, task_desc: str) -> ModelSelect:
         .order_by(fn.cosine_similarity(task_desc, Task.embedding).desc())
         .alias("subq")
     )
-    query = Solution.select(subquery.c.task_id, subquery.c.demo, subquery.c.desc).from_(
-        subquery
+    query = (
+        Solution.select(subquery.c.task_id, subquery.c.demo, subquery.c.desc)
+        .from_(subquery)
+        .where(subquery.c.rnk <= TOP_K)
     )
     return query
 
@@ -375,7 +377,7 @@ def _get_best_solutions(space: Space) -> ModelSelect:
             Task.task_id,
             Task.desc,
             Task.embedding,
-            fn.RANK()
+            fn.ROW_NUMBER()
             .over(
                 partition_by=[SolutionAlias.space, SolutionAlias.task],
                 order_by=[SolutionAlias.metric.desc()],
@@ -386,8 +388,10 @@ def _get_best_solutions(space: Space) -> ModelSelect:
         .join(Task, on=(SolutionAlias.task == Task.task_id))
         .alias("subq")
     )
-    query = Solution.select(subquery.c.task_id, subquery.c.demo, subquery.c.desc).from_(
-        subquery
+    query = (
+        Solution.select(subquery.c.task_id, subquery.c.demo, subquery.c.desc)
+        .from_(subquery)
+        .where(subquery.c.rnk <= TOP_K)
     )
     return query
 
@@ -417,8 +421,7 @@ def gen_experience(space: Space, task_desc: Optional[str] = None) -> List[str]:
     for solution in query:
         if solution.task_id not in examples:
             examples[solution.task_id] = [solution.desc]
-        if len(examples[solution.task_id]) <= TOP_K:
-            examples[solution.task_id].append(
-                f"Configuration {len(examples[solution.task_id])}: {solution.demo}"
-            )
+        examples[solution.task_id].append(
+            f"Configuration {len(examples[solution.task_id])}: {solution.demo}"
+        )
     return ["\n".join(e) for e in examples.values()]
