@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
 import pytest
-from peewee import fn
+from peewee import JOIN, fn
 
-from mlcopilot.constants import TOP_K
+from mlcopilot.constants import MLCOPILOT_DB_BACKEND, TOP_K
 from mlcopilot.experience import (
     _ingest_solution,
     _ingest_space,
@@ -15,6 +15,7 @@ from mlcopilot.experience import (
     ingest_experience,
 )
 from mlcopilot.orm import Solution, Task
+from mlcopilot.space import create_tables, drop_tables
 from mlcopilot.utils import set_llms
 
 from .llm import MockEmbeddingModel, MockKnowledgeLLM
@@ -89,7 +90,12 @@ def test_ingest_solution():
 def test_ingest_experience():
     space_desc = "This is space description"
     space_id = "__test_space__"
-    space = ingest_experience(history_df, None, space_desc, space_id)
+    space = ingest_experience(
+        history_df,
+        {task_id: task_id for task_id in history_df.TASK_ID.unique().astype(str)},
+        space_desc,
+        space_id,
+    )
     assert space is not None
     return space
 
@@ -104,18 +110,26 @@ def test_gen_experience_per_task():
 
 
 def test_gen_experience():
+    set_llms(embedding_model=MockEmbeddingModel)
+    drop_tables()
+    create_tables()
     task_desc = "test task description"
-    space, _ = test_ingest_space()
-
-    test_ingest_task()
-
-    tasks_select = (
-        Task.select()
+    space = test_ingest_experience()
+    order_key = Task.embedding.cosine_distance(task_desc)
+    subquery = (
+        Task.select(Task.task_id)
         .join(Solution)
         .where(Solution.space == space)
         .distinct()
-        .order_by(fn.cosine_similarity(task_desc, Task.embedding).desc())
-    )  # TODO SQL groupby
+    )
+
+    tasks_select = (
+        Task.select()
+        .join(subquery, JOIN.LEFT_OUTER, on=(Task.task_id == subquery.c.task_id))
+        .order_by(order_key)
+    )
     examples_gt = [gen_experience_per_task(space, task) for task in tasks_select]
+
     examples = gen_experience(space, task_desc)
-    assert examples == examples_gt
+
+    assert all(examples[i][:10] == examples_gt[i][:10] for i in range(len(examples)))

@@ -45,7 +45,7 @@ class MockEmbeddingModel(FakeEmbeddings):
 
     def _get_embedding(self, text) -> List[float]:
         md5_10 = int(md5(text.encode("utf-8")).hexdigest(), 16)
-        return [md5_10 // 10**i % 10 for i in range(10)] + [0.0] * EMBED_DIM
+        return [md5_10 // 10**i % 10 for i in range(10)] + [0.0] * (EMBED_DIM - 10)
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         return [self._get_embedding(text) for text in texts]

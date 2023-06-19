@@ -330,6 +330,7 @@ def _get_best_relevant_solutions(space: Space, task_desc: str) -> ModelSelect:
         The best relevant solution.
     """
     SolutionAlias = Solution.alias()
+    order_key = Task.embedding.cosine_distance(task_desc)
     subquery = (
         SolutionAlias.select(
             SolutionAlias.demo,
@@ -345,7 +346,7 @@ def _get_best_relevant_solutions(space: Space, task_desc: str) -> ModelSelect:
         )
         .where(SolutionAlias.space == space)
         .join(Task, on=(SolutionAlias.task == Task.task_id))
-        .order_by(fn.cosine_similarity(task_desc, Task.embedding).desc())
+        .order_by(order_key)
         .alias("subq")
     )
     query = (

@@ -5,6 +5,7 @@ orjson
 pandas
 peewee
 python-dotenv
+psycopg2-binary
 scikit_learn
 tiktoken
 xgboost
