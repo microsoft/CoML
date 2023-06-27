@@ -1,5 +1,8 @@
-import random
-import time
+# 1. Install requirements with pip
+# 2. Copy .env.template file to the ~/.mlcopilot/.env
+# 3. In Vbase database, create a new database named mlcopilot and create EXTENSION vectordb.
+# 4. Run the following code and get bug: not consistent with two sql queries.
+
 from test.llm import MockEmbeddingModel, MockKnowledgeLLM
 from test.test_experience import test_ingest_experience
 
