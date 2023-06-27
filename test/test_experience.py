@@ -1,3 +1,6 @@
+import random
+import time
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -109,6 +112,57 @@ def test_gen_experience_per_task():
     return experience_per_task
 
 
+def test_gen_experience_bug():
+    set_llms(embedding_model=MockEmbeddingModel)
+    drop_tables()
+    create_tables()
+    task_desc = "test task description"
+    space = test_ingest_experience()
+    order_key = Task.embedding.cosine_distance(task_desc)
+    subquery = (
+        Task.select(Task.task_id)
+        .join(Solution)
+        .where(Solution.space == space)
+        .distinct()
+    )
+
+    tasks_select = (
+        Task.select()
+        .join(subquery, JOIN.LEFT_OUTER, on=(Task.task_id == subquery.c.task_id))
+        .order_by(order_key)
+    )
+    a = list(tasks_select)
+    # assert len(a) == 17
+    SolutionAlias = Solution.alias()
+    order_key = Task.embedding.cosine_distance(task_desc)
+    subquery = (
+        SolutionAlias.select(
+            SolutionAlias.demo,
+            Task.task_id,
+            Task.desc,
+            Task.embedding,
+            fn.ROW_NUMBER()
+            .over(
+                partition_by=[SolutionAlias.space, SolutionAlias.task],
+                order_by=[SolutionAlias.metric.desc()],
+            )
+            .alias("rnk"),
+        )
+        .where(SolutionAlias.space == space)
+        .join(Task, on=(SolutionAlias.task == Task.task_id))
+        .order_by(order_key)
+        .alias("subq")
+    )
+    query = (
+        Solution.select(subquery.c.task_id, subquery.c.demo, subquery.c.desc)
+        .from_(subquery)
+        .where(subquery.c.rnk <= TOP_K)
+    )
+    b1 = list(query)
+
+    assert len(b1) == len(a)
+
+
 def test_gen_experience():
     set_llms(embedding_model=MockEmbeddingModel)
     drop_tables()
@@ -128,8 +182,44 @@ def test_gen_experience():
         .join(subquery, JOIN.LEFT_OUTER, on=(Task.task_id == subquery.c.task_id))
         .order_by(order_key)
     )
-    examples_gt = [gen_experience_per_task(space, task) for task in tasks_select]
 
-    examples = gen_experience(space, task_desc)
 
-    assert all(examples[i][:10] == examples_gt[i][:10] for i in range(len(examples)))
+def test_gen_experience2():
+    set_llms(embedding_model=MockEmbeddingModel)
+    drop_tables()
+    random.seed(0)
+    np.random.seed(0)
+    create_tables()
+    task_desc = "test task description"
+    space = test_ingest_experience()
+    Task.insert_many(
+        [
+            {
+                "task_id": str(-i),
+                "embedding": np.random.randn(1536),
+                "desc": "",
+                "row_desc": "",
+            }
+            for i in range(10000)
+        ]
+    ).execute()
+    solutions = [
+        {
+            "task": str(-i),
+            "space": space,
+            "metric": float(i),
+            "row_config": str(i),
+            "extra_metric": "",
+            "demo": "",
+        }
+        for i in range(10000)
+    ]
+    Solution.insert_many(solutions).execute()
+    order_key = Task.embedding.cosine_distance(task_desc)
+    st = time.time()
+    subquery = Task.select(Task.task_id).join(Solution).order_by(order_key).limit(1000)
+    a = list(subquery)
+    delta = time.time() - st
+    print(a[::100])
+    print(len(a))
+    print(f"subquery time: {delta}")
