@@ -14,6 +14,7 @@ LLM_MODELS = {
     "knowledge": lambda: OpenAI(model_name="text-davinci-003"),
     "embedding": lambda: OpenAIEmbeddings(),
 }
+_TOKEN_COUNT_FUNC = None
 
 
 def clean_input(prompt: str = ""):
@@ -136,6 +137,16 @@ def token_count(texts):
     return l
 
 
+def set_token_count_func(func):
+    global _TOKEN_COUNT_FUNC
+    _TOKEN_COUNT_FUNC = func
+
+
+def get_token_count_func():
+    global _TOKEN_COUNT_FUNC
+    return _TOKEN_COUNT_FUNC
+
+
 def get_llm(model_type: str):
     return LLM_MODELS[model_type]
 
@@ -152,3 +163,10 @@ def set_llms(
         LLM_MODELS["knowledge"] = knowledge_model
     if embedding_model is not None:
         LLM_MODELS["embedding"] = embedding_model
+
+
+def escape(text: str) -> str:
+    return text.replace("{", "{{").replace("}", "}}")
+
+
+set_token_count_func(token_count)

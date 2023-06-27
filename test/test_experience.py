@@ -130,6 +130,6 @@ def test_gen_experience():
     )
     examples_gt = [gen_experience_per_task(space, task) for task in tasks_select]
 
-    examples = gen_experience(space, task_desc)
+    retrieved_tasks, examples = gen_experience(space, task_desc)
 
     assert all(examples[i][:10] == examples_gt[i][:10] for i in range(len(examples)))

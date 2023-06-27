@@ -100,13 +100,16 @@ def init_db():
     database_proxy.create_tables([Space, Task, Solution, Knowledge])
 
     if MLCOPILOT_DB_BACKEND == "sqlite":
+        _cache = {}
 
         @database_proxy.func()
         def cosine_similarity(task_emb: BlobField, text: str) -> float:
             emb = np.frombuffer(task_emb, dtype=np.float32)
-            text_emb = np.asarray(
-                get_llm("embedding")().embed_query(text), dtype=np.float32
-            )
+            if text not in _cache:
+                _cache[text] = np.asarray(
+                    get_llm("embedding")().embed_query(text), dtype=np.float32
+                )
+            text_emb = _cache[text]
             return np.dot(emb, text_emb).item()
 
 
@@ -118,7 +121,7 @@ class BaseModel(Model):
 class Space(BaseModel):
     space_id: str = TextField(primary_key=True)
     desc = TextField()
-    quantile_info = BlobField()
+    quantile_info = BlobField(null=True)
 
 
 class Task(BaseModel):
@@ -145,7 +148,8 @@ class Solution(BaseModel):
 
 class Knowledge(BaseModel):
     knowledge = TextField()
-    space = ForeignKeyField(Space, backref="knowledge", primary_key=True)
+    space = ForeignKeyField(Space, backref="knowledge")
+    task = ForeignKeyField(Task, backref="knowledge", null=True)
 
 
 def import_db(tables: Dict[ModelBase, List[Dict[str, Any]]]) -> None:
@@ -166,7 +170,7 @@ def import_db(tables: Dict[ModelBase, List[Dict[str, Any]]]) -> None:
         with database_proxy.atomic():
             for record in records:
                 try:
-                    table.insert(record).execute()
+                    eval(table).insert(record).execute()
                 except:
                     pass
 

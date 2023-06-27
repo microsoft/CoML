@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import langchain
 import numpy as np
@@ -397,7 +397,9 @@ def _get_best_solutions(space: Space) -> ModelSelect:
     return query
 
 
-def gen_experience(space: Space, task_desc: Optional[str] = None) -> List[str]:
+def gen_experience(
+    space: Space, task_desc: Optional[str] = None
+) -> Tuple[List[str], List[str]]:
     """
     Generate experience content from space and optional task description.
 
@@ -425,4 +427,4 @@ def gen_experience(space: Space, task_desc: Optional[str] = None) -> List[str]:
         examples[solution.task_id].append(
             f"Configuration {len(examples[solution.task_id])}: {solution.demo}"
         )
-    return ["\n".join(e) for e in examples.values()]
+    return list(examples.keys()), ["\n".join(e) for e in examples.values()]

@@ -6,10 +6,11 @@ from langchain.prompts import FewShotPromptTemplate, PromptTemplate
 from langchain.prompts.example_selector import LengthBasedExampleSelector
 
 from mlcopilot.constants import *
+from mlcopilot.constants import TOKEN_COMPLETION_LIMIT, TOKEN_LIMIT
 from mlcopilot.experience import gen_experience
 from mlcopilot.orm import Knowledge, Solution, Space, Task, database_proxy
 from mlcopilot.surrogate_utils import evaluate_configs
-from mlcopilot.utils import get_llm, parse_configs
+from mlcopilot.utils import get_llm, get_token_count_func, parse_configs
 
 prefix_sep = "__DUMM_SEP__"
 
@@ -28,6 +29,12 @@ def gen_knowledge_candidate(examples: List[str]) -> str:
     str
         The generated knowledge candidate.
     """
+    prefix_token = get_token_count_func()(
+        "Here are some tasks along with best hyper-parameter configurations to train a model on them.\n"
+    )
+    suffix_token = get_token_count_func()(
+        "\nQ: From the examples above, what patterns can we observe about the relationship between dataset characteristics and the best hyper-parameter configurations? (Answer MUST be concise, critical, point-by-point, line-by-line, and brief. Only include relevant observations without unnecessary elaboration.)\n\nA: 1."
+    )
     example_prompt = PromptTemplate(
         input_variables=["input"],
         template="{input}",
@@ -36,6 +43,12 @@ def gen_knowledge_candidate(examples: List[str]) -> str:
     example_selector = LengthBasedExampleSelector(
         examples=[{"input": example} for example in examples],
         example_prompt=example_prompt,
+        max_length=TOKEN_LIMIT
+        - prefix_token
+        - suffix_token
+        - TOKEN_COMPLETION_LIMIT
+        - 20,
+        get_text_length=get_token_count_func(),
     )
 
     dynamic_prompt = FewShotPromptTemplate(
@@ -76,6 +89,18 @@ def suggest_with_knowledge(
     List[Dict[str, Any]]
         The list of suggested configurations.
     """
+    prefix_token = get_token_count_func()(
+        "Here are some tasks along with best hyper-parameter configurations to train a model on them.\n"
+    )
+    suffix_token = get_token_count_func()(
+        "\nGuidelines:{knowledge}\n\n\nBased on the examples and guidelines above, recommend {TOP_K} hyper-parameter configurations for a new classification dataset.\n\n{output}".format(
+            knowledge=knowledge,
+            TOP_K=str(TOP_K),
+            output=(
+                valid_example[: valid_example.index("\nConfiguration 1:")] + "\n\n"
+            ),
+        )
+    )
     example_prompt = PromptTemplate(
         input_variables=["input"],
         template="{input}",
@@ -84,6 +109,12 @@ def suggest_with_knowledge(
     example_selector = LengthBasedExampleSelector(
         examples=[{"input": example} for example in examples],
         example_prompt=example_prompt,
+        max_length=TOKEN_LIMIT
+        - prefix_token
+        - suffix_token
+        - TOKEN_COMPLETION_LIMIT
+        - 20,
+        get_text_length=get_token_count_func(),
     )
 
     dynamic_prompt = FewShotPromptTemplate(
@@ -140,7 +171,7 @@ def post_validation(
         print("Knowledge already exists.")
         return knowledge
     quantile_infos = orjson.loads(space.quantile_info)
-    examples = gen_experience(space)
+    retrieved_tasks, examples = gen_experience(space)
     best_score = float("-inf")
     knowledge = None
     for _ in range(3):
@@ -174,9 +205,11 @@ def post_validation(
     return knowledge
 
 
-def get_knowledge(space: Space):
+def get_knowledge(space: Space, task=None):
     try:
-        knowledge = Knowledge.get(Knowledge.space_id == space.space_id).knowledge
+        knowledge = Knowledge.get(
+            Knowledge.space_id == space.space_id, Knowledge.task == task
+        ).knowledge
         return knowledge
     except:
         return None
