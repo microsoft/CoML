@@ -1,4 +1,5 @@
 import random
+import re
 from typing import Any, Callable, Dict, List, Optional
 
 import orjson
@@ -47,7 +48,7 @@ def gen_knowledge_candidate(examples: List[str]) -> str:
         - prefix_token
         - suffix_token
         - TOKEN_COMPLETION_LIMIT
-        - 20,  # 20 is the additional length for ensuring the completion.
+        - RELAX_TOKEN,
         get_text_length=get_token_count_func(),
     )
 
@@ -113,7 +114,7 @@ def suggest_with_knowledge(
         - prefix_token
         - suffix_token
         - TOKEN_COMPLETION_LIMIT
-        - 20,  # 20 is the additional length for ensuring the completion.
+        - RELAX_TOKEN,
         get_text_length=get_token_count_func(),
     )
 
@@ -148,7 +149,7 @@ def suggest_with_knowledge(
 
 def post_validation(
     space: Space, surrogate_fn: Callable, config_names: List[str]
-) -> str:
+) -> List[str]:
     """
     Post validation to generate knowledge.
 
@@ -163,17 +164,17 @@ def post_validation(
 
     Returns
     -------
-    str
-        The generated knowledge.
+    List[str]
+        The list of generated knowledge.
     """
-    knowledge = get_knowledge(space.space_id)
-    if knowledge is not None:
+    knowledges = get_knowledge(space.space_id)
+    if knowledges != "":
         print("Knowledge already exists.")
-        return knowledge
+        return knowledges
     quantile_infos = orjson.loads(space.quantile_info)
     retrieved_tasks, examples = gen_experience(space)
     best_score = float("-inf")
-    knowledge = None
+    knowledges = None
     for _ in range(3):
         random.shuffle(examples)
         knowledge_candidate = gen_knowledge_candidate(examples)
@@ -199,17 +200,24 @@ def post_validation(
             score += _score
         if best_score < score:
             best_score = score
-            knowledge = knowledge_candidate
-    assert knowledge is not None, "Knowledge is not generated."
+            knowledges = knowledge_candidate
+    assert knowledges is not None, "Knowledge is not generated."
 
-    return knowledge
+    knowledges = re.findall(
+        r"\n\d+\.([\s\S]+?)(?=\n+\d+\.)", "\n" + knowledges + "\n999."
+    )
+    return knowledges
 
 
 def get_knowledge(space: Space, task=None):
     try:
-        knowledge = Knowledge.get(
-            Knowledge.space_id == space.space_id, Knowledge.task == task
-        ).knowledge
-        return knowledge
+        knowledges = Knowledge.select().where(
+            (Knowledge.space_id == space.space_id)
+            & ((Knowledge.task == task) | (Knowledge.task == None))
+        )
+        knowledge_str = ""
+        for i, knowledge in enumerate(knowledges):
+            knowledge_str += f"{i+1}. {knowledge.knowledge}\n\n"
+        return knowledge_str
     except:
-        return None
+        return ""

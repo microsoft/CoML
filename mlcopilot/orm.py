@@ -122,6 +122,8 @@ class Space(BaseModel):
     space_id: str = TextField(primary_key=True)
     desc = TextField()
     quantile_info = BlobField(null=True)
+    prefix = TextField(default=DEFAULT_PROMPT_PREFIX)
+    suffix = TextField(default=DEFAULT_PROMPT_SUFFIX)
 
 
 class Task(BaseModel):

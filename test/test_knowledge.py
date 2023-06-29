@@ -1,3 +1,5 @@
+import re
+
 import pandas as pd
 import pytest
 
@@ -69,7 +71,10 @@ def test_post_validation():
     surrogate = train_surrogate(history_df_processed)
     set_llms(suggest_model=MockSuggestLLM, knowledge_model=MockKnowledgeLLM)
     space_id = "__test_space__"
-    knowledge = post_validation(space, surrogate, config_names)
+    knowledges = post_validation(space, surrogate, config_names)
     delete_space(space_id)
-    assert knowledge == f"\n1.{MockKnowledgeLLM()('')}"
-    return knowledge
+    assert knowledges == re.findall(
+        r"\n\d+\.([\s\S]+?)(?=\n+\d+\.)",
+        "\n" + f"\n1.{MockKnowledgeLLM()('')}" + "\n999.",
+    )
+    return knowledges
