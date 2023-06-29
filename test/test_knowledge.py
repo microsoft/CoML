@@ -6,6 +6,7 @@ import pytest
 from mlcopilot.knowledge import (
     gen_knowledge_candidate,
     post_validation,
+    split_knowledge,
     suggest_with_knowledge,
 )
 from mlcopilot.space import create_space, delete_space
@@ -73,8 +74,5 @@ def test_post_validation():
     space_id = "__test_space__"
     knowledges = post_validation(space, surrogate, config_names)
     delete_space(space_id)
-    assert knowledges == re.findall(
-        r"\n\d+\.([\s\S]+?)(?=\n+\d+\.)",
-        "\n" + f"\n1.{MockKnowledgeLLM()('')}" + "\n999.",
-    )
+    assert set(knowledges) == set(split_knowledge(f"1. {MockKnowledgeLLM()('')}"))
     return knowledges

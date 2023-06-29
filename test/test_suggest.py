@@ -4,6 +4,7 @@ import orjson
 import pytest
 
 from mlcopilot.constants import TOP_K, inverse_bin_map
+from mlcopilot.knowledge import split_knowledge
 from mlcopilot.orm import Knowledge
 from mlcopilot.space import create_space, delete_space
 from mlcopilot.suggest import suggest
@@ -36,18 +37,17 @@ def test_suggest_with_few_shot_no_knowledge():
 
 def test_suggest_with_few_shot_with_knowledge():
     space = _create_space()
-    knowledge_ = f"{MockKnowledgeLLM()('')}"
+    knowledges_ = split_knowledge(f"1. {MockKnowledgeLLM()('')}")
     try:
-        Knowledge.create(space_id=space.space_id, knowledge=knowledge_)
+        for knowledge_ in knowledges_:
+            Knowledge.create(space_id=space.space_id, knowledge=knowledge_)
     except:
         pass
     set_llms(suggest_model=MockSuggestLLM, embedding_model=MockEmbeddingModel)
     suggest_configs, knowledge = suggest(space, "")
     delete_space(space.space_id)
     assert len(suggest_configs) == 3
-    assert (
-        re.findall(r"\n\d+\.([\s\S]+?)(?=\n+\d+\.)", "\n" + knowledge + "\n999.")[
-            0
-        ].strip()
-        == knowledge_
-    )
+    knowledge_str = ""
+    for i, knowledge_ in enumerate(knowledges_):
+        knowledge_str += f"{i+1}. {knowledge_}\n\n"
+    assert knowledge == knowledge_str

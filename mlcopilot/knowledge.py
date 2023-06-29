@@ -167,7 +167,7 @@ def post_validation(
     List[str]
         The list of generated knowledge.
     """
-    knowledges = get_knowledge(space.space_id)
+    knowledges = get_knowledge(space)
     if knowledges != "":
         print("Knowledge already exists.")
         return knowledges
@@ -203,9 +203,7 @@ def post_validation(
             knowledges = knowledge_candidate
     assert knowledges is not None, "Knowledge is not generated."
 
-    knowledges = re.findall(
-        r"\n\d+\.([\s\S]+?)(?=\n+\d+\.)", "\n" + knowledges + "\n999."
-    )
+    knowledges = split_knowledge(knowledges)
     return knowledges
 
 
@@ -221,3 +219,30 @@ def get_knowledge(space: Space, task=None):
         return knowledge_str
     except:
         return ""
+
+
+def split_knowledge(knowledges: str) -> List[str]:
+    """
+    Split the knowledge into a list of knowledge.
+
+    Parameters
+    ----------
+    knowledges: str
+        The knowledge.
+
+    Returns
+    -------
+    List[str]
+        The list of knowledge.
+
+    Examples
+    --------
+    >>> split_knowledge("1. A\n2. B\n3. C\n")
+    ["A", "B", "C"]
+    """
+    return [
+        k.strip()
+        for k in re.findall(
+            r"\n\d+\.([\s\S]+?)(?=\n+\d+\.)", "\n" + knowledges + "\n999."
+        )
+    ]
