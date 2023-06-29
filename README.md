@@ -20,8 +20,7 @@ MLCopilot is a tool to help you find the best models/hyperparametes for your tas
 0. Clone this repo: `git clone REPO_URL; cd mlcopilot`
 1. Put assets/mlcopilot.db in your home directory: `cp assets/mlcopilot.db ~/.mlcopilot/mlcopilot.db`
 2. Install Python 3.8 or higher
-3. Build: `hatch build`. (May need to install [hatch](https://hatch.pypa.io/latest/install/) first)
-4. Install: `pip install ./dist/*.whl`
+3. Install: `pip install .`. If you want to develop, use `pip install -e .[dev]` instead.
 
 ### Run
 

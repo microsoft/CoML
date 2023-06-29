@@ -82,3 +82,11 @@ skip = '''
     dist/*
 
 '''
+[project.optional-dependencies]
+dev = [
+  "pytest==7.4.0",
+  "flake8",
+  "pre-commit",
+  "black",
+  "isort",
+]
