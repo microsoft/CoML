@@ -163,7 +163,7 @@ def _get_prompt_with_few_shot(
         - prefix_token
         - suffix_token
         - TOKEN_COMPLETION_LIMIT
-        - 20,
+        - 20,  # 20 is the additional length for ensuring the completion.
         get_text_length=get_token_count_func(),
     )
 
@@ -264,7 +264,7 @@ def _get_prompt_in_huggingface(
         - prefix_token
         - suffix_token
         - TOKEN_COMPLETION_LIMIT
-        - 20,
+        - 20,  # 20 is the additional length for ensuring the completion.
         get_text_length=get_token_count_func(),
     )
 

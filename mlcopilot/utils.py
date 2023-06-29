@@ -2,7 +2,7 @@ import os
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.llms import OpenAI
@@ -124,7 +124,11 @@ def format_config(
 def _token_count(text):
     import tiktoken
 
-    encoding = tiktoken.get_encoding("gpt2")
+    try:
+        encoding = tiktoken.encoding_for_model("gpt-4")
+    except KeyError:
+        print("Warning: model not found. Using gpt-2 encoding.")
+        encoding = tiktoken.get_encoding("gpt2")
     return len(encoding.encode(text))
 
 
@@ -152,9 +156,9 @@ def get_llm(model_type: str):
 
 
 def set_llms(
-    suggest_model: Optional[str] = None,
-    knowledge_model: Optional[str] = None,
-    embedding_model: Optional[str] = None,
+    suggest_model: Optional[Callable] = None,
+    knowledge_model: Optional[Callable] = None,
+    embedding_model: Optional[Callable] = None,
 ):
     global LLM_MODELS
     if suggest_model is not None:

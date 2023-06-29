@@ -47,7 +47,7 @@ def gen_knowledge_candidate(examples: List[str]) -> str:
         - prefix_token
         - suffix_token
         - TOKEN_COMPLETION_LIMIT
-        - 20,
+        - 20,  # 20 is the additional length for ensuring the completion.
         get_text_length=get_token_count_func(),
     )
 
@@ -113,7 +113,7 @@ def suggest_with_knowledge(
         - prefix_token
         - suffix_token
         - TOKEN_COMPLETION_LIMIT
-        - 20,
+        - 20,  # 20 is the additional length for ensuring the completion.
         get_text_length=get_token_count_func(),
     )
 
