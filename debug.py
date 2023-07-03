@@ -1,7 +1,8 @@
 # 1. Install requirements with pip
-# 2. Copy mlcopilot/.env.template file to the ~/.mlcopilot/.env
-# 3. In Vbase database, create a new database named mlcopilot and create EXTENSION vectordb.
-# 4. Run the following code and get bug: not consistent with two sql queries.
+# 2. Copy mlcopilot/.env.template file to the ~/.mlcopilot/.env and fill in OpenAI API key (should cost a few cents for OpenAI embedding).
+# 3. Build Vbase database. Need to rebuild with VECTOR_MAX_DIM in vectordb/references/pgvector/src/vector.h set to at least 1536.
+# 4. Create a new database named mlcopilot and create EXTENSION vectordb and vector.
+# 5. Run the following code and get bug: two sql queries have inconsistent results.
 
 from test.llm import MockEmbeddingModel, MockKnowledgeLLM
 from test.test_experience import test_ingest_experience
