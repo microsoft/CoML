@@ -10,10 +10,10 @@ from test.test_experience import test_ingest_experience
 import numpy as np
 import pandas as pd
 # import pytest
-from peewee import JOIN, fn, database, database_proxy
+from peewee import JOIN, fn 
 
 # from mlcopilot.constants import MLCOPILOT_DB_BACKEND, TOP_K
-from mlcopilot.orm import Solution, Task, database
+from mlcopilot.orm import Solution, Task, database, database_proxy
 from mlcopilot.space import create_tables, drop_tables
 from mlcopilot.utils import set_llms
 
