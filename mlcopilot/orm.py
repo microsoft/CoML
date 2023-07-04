@@ -5,32 +5,112 @@ from peewee import (
     AutoField,
     BlobField,
     CompositeKey,
+    DatabaseProxy,
+    Expression,
+    Field,
     FloatField,
     ForeignKeyField,
     Model,
+    ModelBase,
     PrimaryKeyField,
-    Proxy,
     TextField,
+    Value,
+    fn,
 )
-from playhouse.sqlite_ext import SqliteExtDatabase
 
-from mlcopilot.constants import MLCOPILOT_DB_PATH
+try:
+    from pgvector.psycopg2 import VectorAdapter, register_vector
+    from pgvector.utils import from_db, to_db
+except ImportError:
+    from_db = to_db = None
+
+from mlcopilot.constants import *
 from mlcopilot.utils import get_llm
 
-database_proxy = Proxy()
+
+class ArrayField(BlobField):
+    field_type = "BLOB"
+
+    def db_value(self, value):
+        if isinstance(value, np.ndarray):
+            value = value.tobytes()
+        return super().db_value(value)
+
+    def python_value(self, value):
+        return np.frombuffer(value, dtype=np.float32)
+
+    def cosine_distance(self, text: str):
+        return fn.cosine_similarity(self, text).desc()
 
 
-def init_db():
-    database_proxy.initialize(SqliteExtDatabase(MLCOPILOT_DB_PATH))
-    database_proxy.create_tables([Space, Task, Solution, Knowledge])
+class VectorField(Field):
+    field_type = "VECTOR"
 
-    @database_proxy.func()
-    def cosine_similarity(text: str, task_emb: BlobField) -> float:
-        emb = np.frombuffer(task_emb, dtype=np.float32)
+    def __init__(self, dim=None, *args, **kwargs):
+        self.dim = dim
+        super().__init__(*args, **kwargs)
+
+    def get_modifiers(self) -> None:
+        return [self.dim]
+
+    def db_value(self, value):
+        if isinstance(value, str):
+            return value
+        elif isinstance(value, bytes):
+            value = np.frombuffer(value, dtype=np.float32)
+        return to_db(value, self.dim)
+
+    def python_value(self, value):
+        return from_db(value)
+
+    def cosine_distance(self, text: str):
         text_emb = np.asarray(
             get_llm("embedding")().embed_query(text), dtype=np.float32
         )
-        return np.dot(emb, text_emb).item()
+        return Expression(self, "<=>", Value(to_db(text_emb, self.dim), unpack=False))
+
+
+database_proxy = DatabaseProxy()
+
+if MLCOPILOT_DB_BACKEND == "sqlite":
+    from peewee import SqliteDatabase
+
+    init_db_func = lambda: SqliteDatabase(MLCOPILOT_DB_PATH)
+elif MLCOPILOT_DB_BACKEND == "postgres":
+    from peewee import PostgresqlDatabase
+
+    init_db_func = lambda: PostgresqlDatabase(
+        MLCOPILOT_DB_NAME,
+        host=MLCOPILOT_DB_HOST,
+        port=MLCOPILOT_DB_PORT,
+        user=MLCOPILOT_DB_USER,
+        password=MLCOPILOT_DB_PASSWORD,
+    )
+else:
+    raise NotImplementedError(
+        f"MLCOPILOT_DB_BACKEND {MLCOPILOT_DB_BACKEND} not supported."
+    )
+
+
+def init_db():
+    database_proxy.initialize(init_db_func())
+    conn = database_proxy.connection()
+    if MLCOPILOT_DB_BACKEND == "postgres":
+        register_vector(conn)
+    database_proxy.create_tables([Space, Task, Solution, Knowledge])
+
+    if MLCOPILOT_DB_BACKEND == "sqlite":
+        _cache = {}
+
+        @database_proxy.func()
+        def cosine_similarity(task_emb: BlobField, text: str) -> float:
+            emb = np.frombuffer(task_emb, dtype=np.float32)
+            if text not in _cache:
+                _cache[text] = np.asarray(
+                    get_llm("embedding")().embed_query(text), dtype=np.float32
+                )
+            text_emb = _cache[text]
+            return np.dot(emb, text_emb).item()
 
 
 class BaseModel(Model):
@@ -41,12 +121,16 @@ class BaseModel(Model):
 class Space(BaseModel):
     space_id: str = TextField(primary_key=True)
     desc = TextField()
-    quantile_info = BlobField()
+    quantile_info = BlobField(null=True)
+    prefix = TextField(default=DEFAULT_PROMPT_PREFIX)
+    suffix = TextField(default=DEFAULT_PROMPT_SUFFIX)
 
 
 class Task(BaseModel):
     task_id: str = TextField(primary_key=True)
-    embedding = BlobField()
+    embedding = (
+        ArrayField() if MLCOPILOT_DB_BACKEND == "sqlite" else VectorField(EMBED_DIM)
+    )
     desc = TextField()
     row_desc = TextField()
 
@@ -66,57 +150,29 @@ class Solution(BaseModel):
 
 class Knowledge(BaseModel):
     knowledge = TextField()
-    space = ForeignKeyField(Space, backref="knowledge", primary_key=True)
+    space = ForeignKeyField(Space, backref="knowledge")
+    task = ForeignKeyField(Task, backref="knowledge", null=True)
 
 
-def extract_tables() -> Dict[BaseModel, List[Dict[str, Any]]]:
+def import_db(tables: Dict[ModelBase, List[Dict[str, Any]]]) -> None:
     """
-    Extracts the contents of the database into a dictionary.
+    Imports the contents of the database from a dictionary.
+
+    Parameters:
+    -----------
+    tables: Dict[BaseModel, List[Dict[str, Any]]]
+        A dictionary with the tables as keys and a list of records as values.
 
     Returns:
     --------
-    Dict[BaseModel, List[Dict[str, Any]]]
-        A dictionary with the tables as keys and a list of records as values.
-    """
-    tables = {
-        Space: [],
-        Task: [],
-        Solution: [],
-        Knowledge: [],
-    }
-    for table in tables:
-        for record in table.select():
-            tables[table].append(record.__data__)
-    return tables
-
-
-def import_db(imported_db_path: str) -> None:
-    """
-    Import database from a given path to the default database path.
-
-    Parameters
-    ----------
-    db_path: str
-        The path to the database.
-
-    Returns
-    -------
     None
     """
-    database_proxy.close()
-    imported_db = SqliteExtDatabase(imported_db_path)
-    database_proxy.initialize(imported_db)
-    database_proxy.connect()
-    database_proxy.create_tables([Space, Task, Solution, Knowledge])
-    tables = extract_tables()
-    database_proxy.close()
-    init_db()
     for table, records in tables.items():
         # skip duplicate records
         with database_proxy.atomic():
             for record in records:
                 try:
-                    table.insert(record).execute()
+                    eval(table).insert(record).execute()
                 except:
                     pass
 

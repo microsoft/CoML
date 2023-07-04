@@ -2,7 +2,7 @@ import os
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.llms import OpenAI
@@ -14,6 +14,7 @@ LLM_MODELS = {
     "knowledge": lambda: OpenAI(model_name="text-davinci-003"),
     "embedding": lambda: OpenAIEmbeddings(),
 }
+_TOKEN_COUNT_FUNC = None
 
 
 def clean_input(prompt: str = ""):
@@ -123,7 +124,11 @@ def format_config(
 def _token_count(text):
     import tiktoken
 
-    encoding = tiktoken.get_encoding("gpt2")
+    try:
+        encoding = tiktoken.encoding_for_model("gpt-4")
+    except KeyError:
+        print("Warning: model not found. Using gpt-2 encoding.")
+        encoding = tiktoken.get_encoding("gpt2")
     return len(encoding.encode(text))
 
 
@@ -136,14 +141,24 @@ def token_count(texts):
     return l
 
 
+def set_token_count_func(func):
+    global _TOKEN_COUNT_FUNC
+    _TOKEN_COUNT_FUNC = func
+
+
+def get_token_count_func():
+    global _TOKEN_COUNT_FUNC
+    return _TOKEN_COUNT_FUNC
+
+
 def get_llm(model_type: str):
     return LLM_MODELS[model_type]
 
 
 def set_llms(
-    suggest_model: Optional[str] = None,
-    knowledge_model: Optional[str] = None,
-    embedding_model: Optional[str] = None,
+    suggest_model: Optional[Callable] = None,
+    knowledge_model: Optional[Callable] = None,
+    embedding_model: Optional[Callable] = None,
 ):
     global LLM_MODELS
     if suggest_model is not None:
@@ -152,3 +167,10 @@ def set_llms(
         LLM_MODELS["knowledge"] = knowledge_model
     if embedding_model is not None:
         LLM_MODELS["embedding"] = embedding_model
+
+
+def escape(text: str) -> str:
+    return re.sub("(?<!{)\{(.*?)\}(?!})", r"{{\1}}", text)
+
+
+set_token_count_func(token_count)

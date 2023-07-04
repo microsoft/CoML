@@ -13,9 +13,12 @@ dependencies = [
   "pandas",
   "peewee",
   "python-dotenv",
+  "psycopg2-binary",
   "scikit_learn",
   "tiktoken",
   "xgboost",
+  "typing-inspect==0.8.0",
+  "typing_extensions==4.5.0"
 ]
 description = 'A Machine Learning configuration assistant.'
 readme = "README.md"
@@ -79,3 +82,11 @@ skip = '''
     dist/*
 
 '''
+[project.optional-dependencies]
+dev = [
+  "pytest==7.4.0",
+  "flake8",
+  "pre-commit",
+  "black",
+  "isort",
+]

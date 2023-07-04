@@ -1,3 +1,4 @@
+import re
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import orjson
@@ -10,13 +11,14 @@ from mlcopilot.experience import gen_experience
 from mlcopilot.knowledge import get_knowledge
 from mlcopilot.orm import Knowledge, Solution, Space, Task, database_proxy
 from mlcopilot.space import import_space, print_space
-from mlcopilot.utils import clean_input, get_llm, parse_configs
-
-zero_shot_prompt = """Recommend best configurations to train a model for a new task. Format strictly follows this template: ```Configuration 1: {{parameter_1_name}} is {{parameter_1_value}}. {{parameter_2_name}} is {{parameter_2_value}}...{{parameter_n_name}} is {{parameter_n_value}}.
-Configuration 2: {{parameter_1_name}} is {{parameter_1_value}}. {{parameter_2_name}} is {{parameter_2_value}}...{{parameter_n_name}} is {{parameter_n_value}}.
-Configuration 3: {{parameter_1_name}} is {{parameter_1_value}}. {{parameter_2_name}} is {{parameter_2_value}}...{{parameter_n_name}} is {{parameter_n_value}}.
-```
-"""
+from mlcopilot.utils import (
+    clean_input,
+    escape,
+    get_llm,
+    get_token_count_func,
+    parse_configs,
+    set_llms,
+)
 
 
 def suggest_interactive() -> None:
@@ -41,18 +43,21 @@ def suggest_interactive() -> None:
         )
         task_desc = clean_input("Your description for new task: ").strip(".") + "."
         suggest_configs, knowledge = suggest(space, task_desc)
-
-        print(f"\n* Rationale: ")
-        print(knowledge)
+        if knowledge:
+            print(f"\n* Rationale: ")
+            print(knowledge)
         print(f"\n* Recommended configurations: ")
-        for i, suggest_config in enumerate(suggest_configs):
-            print(f"Suggested configuration {i+1}. {suggest_config}")
+        if isinstance(suggest_configs, str):
+            print(suggest_configs)
+        else:
+            for i, suggest_config in enumerate(suggest_configs):
+                print(f"Suggested configuration {i+1}. {suggest_config}")
         # press any key to continue, press 'q' to quit
         if clean_input('Press any key to continue, press "q" to quit: ') == "q":
             break
 
 
-def suggest(space: Space, task_desc: str) -> Tuple[Dict[str, Any], Union[str, None]]:
+def suggest(space: Space, task_desc: str) -> Tuple[Any, Union[str, None]]:
     """
     Suggest configurations for a new task.
 
@@ -65,113 +70,75 @@ def suggest(space: Space, task_desc: str) -> Tuple[Dict[str, Any], Union[str, No
 
     Returns
     -------
-    Tuple[Dict[str, Any], Union[str, None]]
+    Tuple[Any, Union[str, None]]
         A tuple of suggested configurations and rationale.
     """
-    knowledge = get_knowledge(space)
     task_desc = f"""Task: {task_desc}"""
 
-    examples = gen_experience(space, task_desc)
+    retrieved_tasks, examples = gen_experience(space, task_desc)
+    knowledge = (
+        get_knowledge(space, retrieved_tasks[0])
+        if len(retrieved_tasks)
+        else get_knowledge(space)
+    )
 
     llm = get_llm("suggest")()
-    quantile_infos = orjson.loads(space.quantile_info)
+    quantile_infos = orjson.loads(space.quantile_info) if space.quantile_info else None
 
-    if len(examples):
-        prompt = _get_prompt_with_few_shot(space, task_desc, examples)
-    else:
-        prompt = _get_prompt_with_zero_shot(space, task_desc)
+    prompt_addition_info = {
+        "new_task_desc": task_desc,
+        "knowledge": knowledge,
+        "TOP_K": str(TOP_K),
+        "space_desc": space.desc,
+    }
 
-    response = llm(prompt)
-    suggest_configs = parse_configs(
-        response,
-        TOP_K,
-        inverse_bin_map,
-        quantile_infos,
-    )
-    return suggest_configs, knowledge
+    prefix = format_prompt(space.prefix, prompt_addition_info)
+    suffix = format_prompt(space.suffix, prompt_addition_info)
 
+    token_count_func = get_token_count_func()
+    prefix_token = token_count_func(prefix)
+    suffix_token = token_count_func(suffix)
 
-def _get_prompt_with_few_shot(
-    space: Space, task_desc: str, examples: List[Dict[str, Any]]
-) -> str:
-    """
-    Generate prompt with few-shot examples.
-
-    Parameters
-    ----------
-    space: Space
-        The space to suggest configurations.
-    task_desc: str
-        The description of the new task.
-    examples
-        A list of examples.
-
-    Returns
-    -------
-    str
-        The prompt with few-shot examples.
-    """
-    knowledge = get_knowledge(space)
     example_prompt = PromptTemplate(
         input_variables=["input"],
         template="{input}",
     )
 
     example_selector = LengthBasedExampleSelector(
-        examples=[{"input": example} for example in examples],
+        examples=[{"input": escape(example)} for example in examples],
         example_prompt=example_prompt,
+        max_length=TOKEN_LIMIT
+        - prefix_token
+        - suffix_token
+        - TOKEN_COMPLETION_LIMIT
+        - RELAX_TOKEN,
+        get_text_length=token_count_func,
     )
 
-    if knowledge:
-        dynamic_prompt = FewShotPromptTemplate(
-            example_selector=example_selector,
-            example_prompt=example_prompt,
-            prefix="Here are some tasks along with best hyper-parameter configurations to train a model on them.\n",
-            suffix="\nGuidelines:{knowledge}\n\n\nBased on the examples and guidelines above, recommend {TOP_K} hyper-parameter configurations for a new classification dataset.\n\n{output}",
-            input_variables=["knowledge", "TOP_K", "output"],
-        )
-        prompt = dynamic_prompt.format(
-            knowledge=knowledge,
-            TOP_K=str(TOP_K),
-            output=(f"{task_desc}\n\n"),
+    dynamic_prompt = FewShotPromptTemplate(
+        example_selector=example_selector,
+        example_prompt=example_prompt,
+        prefix=prefix,
+        suffix=suffix,
+        input_variables=[],
+    )
+    prompt = dynamic_prompt.format()
+
+    response = llm(prompt)
+    if quantile_infos:
+        suggest_configs = parse_configs(
+            response,
+            TOP_K,
+            inverse_bin_map,
+            quantile_infos,
         )
     else:
-        dynamic_prompt = FewShotPromptTemplate(
-            example_selector=example_selector,
-            example_prompt=example_prompt,
-            prefix="Here are some tasks along with best hyper-parameter configurations to train a model on them.\n",
-            suffix="\n\n\nBased on the examples above, recommend {TOP_K} hyper-parameter configurations for a new classification dataset.\n\n{output}",
-            input_variables=["TOP_K", "output"],
-        )
-        prompt = dynamic_prompt.format(
-            TOP_K=str(TOP_K),
-            output=(f"{task_desc}\n\n"),
-        )
-    return prompt
+        suggest_configs = response
+    return suggest_configs, knowledge
 
 
-def _get_prompt_with_zero_shot(space: Space, task_desc: str) -> str:
-    """
-    Generate prompt with zero-shot examples.
-
-    Parameters
-    ----------
-    space: Space
-        The space to suggest configurations.
-    task_desc: str
-        The description of the new task.
-
-    Returns
-    -------
-    str
-        The prompt with zero-shot examples.
-    """
-    promptTemplate = PromptTemplate.from_template(
-        "Recommend best configurations to train a model for a new task.\n\n{space_desc}{zero_shot_prompt}\n{task_desc}\n\n"
-    )
-    prompt = promptTemplate.format(
-        space_desc=space.desc,
-        zero_shot_prompt=zero_shot_prompt,
-        task_desc=task_desc,
-    )
+def format_prompt(prompt: str, prompt_optional_info: Dict[str, str]):
+    fs = [f for f in PROMPT_FORMATS if re.search("(?<!{)\{" + f + "\}(?!})", prompt)]
+    for f in fs:
+        prompt = re.sub("(?<!{)\{" + f + "\}(?!})", prompt_optional_info[f], prompt)
     return prompt

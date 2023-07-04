@@ -8,15 +8,37 @@ __all__ = [
     "bin_map",
     "inverse_bin_map",
     "q_num",
+    "MLCOPILOT_DB_BACKEND",
+    "MLCOPILOT_DB_NAME",
+    "MLCOPILOT_DB_HOST",
+    "MLCOPILOT_DB_PORT",
+    "MLCOPILOT_DB_USER",
+    "MLCOPILOT_DB_PASSWORD",
+    "PROMPT_FORMATS",
+    "DEFAULT_PROMPT_PREFIX",
+    "DEFAULT_PROMPT_SUFFIX",
+    "TOKEN_LIMIT",
+    "TOKEN_COMPLETION_LIMIT",
+    "RELAX_TOKEN",
 ]
 
 TOP_K = 3
 EMBED_DIM = 1536
+TOKEN_LIMIT = 4096
+TOKEN_COMPLETION_LIMIT = 800
+RELAX_TOKEN = 500  # RELAX_TOKEN is the number of tokens to void token limit
 
+MLCOPILOT_DB_BACKEND = os.environ.get("MLCOPILOT_DB_BACKEND", "sqlite")
 
 MLCOPILOT_DB_PATH = Path(
     os.environ.get("MLCOPILOT_DB_PATH", Path.home() / ".mlcopilot" / "mlcopilot.db")
 ).expanduser()
+
+MLCOPILOT_DB_NAME = os.environ.get("MLCOPILOT_DB_NAME", "mlcopilot")
+MLCOPILOT_DB_HOST = os.environ.get("MLCOPILOT_DB_HOST", "localhost")
+MLCOPILOT_DB_PORT = os.environ.get("MLCOPILOT_DB_PORT", 5432)
+MLCOPILOT_DB_USER = os.environ.get("MLCOPILOT_DB_USER", "postgres")
+MLCOPILOT_DB_PASSWORD = os.environ.get("MLCOPILOT_DB_PASSWORD", "")
 
 bin_map = {
     0.1: "very small",
@@ -46,3 +68,17 @@ inverse_bin_map.update(
 )
 
 q_num = sorted(list(bin_map.keys()))
+
+PROMPT_FORMATS = {
+    "TOP_K",
+    "knowledge",
+    "space_desc",
+    "new_task_desc",
+}
+
+DEFAULT_PROMPT_PREFIX = """{space_desc}\nRecommend best configurations to train a model for a new task. Format strictly follows this template: ```Configuration 1: {{parameter_1_name}} is {{parameter_1_value}}. {{parameter_2_name}} is {{parameter_2_value}}...{{parameter_n_name}} is {{parameter_n_value}}.
+Configuration 2: {{parameter_1_name}} is {{parameter_1_value}}. {{parameter_2_name}} is {{parameter_2_value}}...{{parameter_n_name}} is {{parameter_n_value}}.
+Configuration 3: {{parameter_1_name}} is {{parameter_1_value}}. {{parameter_2_name}} is {{parameter_2_value}}...{{parameter_n_name}} is {{parameter_n_value}}.
+```\nHere are some tasks along with best hyper-parameter configurations to train a model on them.\n"""
+
+DEFAULT_PROMPT_SUFFIX = """\nGuidelines:{knowledge}\n\n\nBased on the examples(if provided) and guidelines(if provided) above, recommend {TOP_K} hyper-parameter configurations for a new classification dataset.\n\n{new_task_desc}"""

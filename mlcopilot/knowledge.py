@@ -1,4 +1,5 @@
 import random
+import re
 from typing import Any, Callable, Dict, List, Optional
 
 import orjson
@@ -6,10 +7,11 @@ from langchain.prompts import FewShotPromptTemplate, PromptTemplate
 from langchain.prompts.example_selector import LengthBasedExampleSelector
 
 from mlcopilot.constants import *
+from mlcopilot.constants import TOKEN_COMPLETION_LIMIT, TOKEN_LIMIT
 from mlcopilot.experience import gen_experience
 from mlcopilot.orm import Knowledge, Solution, Space, Task, database_proxy
 from mlcopilot.surrogate_utils import evaluate_configs
-from mlcopilot.utils import get_llm, parse_configs
+from mlcopilot.utils import get_llm, get_token_count_func, parse_configs
 
 prefix_sep = "__DUMM_SEP__"
 
@@ -28,6 +30,12 @@ def gen_knowledge_candidate(examples: List[str]) -> str:
     str
         The generated knowledge candidate.
     """
+    prefix_token = get_token_count_func()(
+        "Here are some tasks along with best hyper-parameter configurations to train a model on them.\n"
+    )
+    suffix_token = get_token_count_func()(
+        "\nQ: From the examples above, what patterns can we observe about the relationship between dataset characteristics and the best hyper-parameter configurations? (Answer MUST be concise, critical, point-by-point, line-by-line, and brief. Only include relevant observations without unnecessary elaboration.)\n\nA: 1."
+    )
     example_prompt = PromptTemplate(
         input_variables=["input"],
         template="{input}",
@@ -36,6 +44,12 @@ def gen_knowledge_candidate(examples: List[str]) -> str:
     example_selector = LengthBasedExampleSelector(
         examples=[{"input": example} for example in examples],
         example_prompt=example_prompt,
+        max_length=TOKEN_LIMIT
+        - prefix_token
+        - suffix_token
+        - TOKEN_COMPLETION_LIMIT
+        - RELAX_TOKEN,
+        get_text_length=get_token_count_func(),
     )
 
     dynamic_prompt = FewShotPromptTemplate(
@@ -76,6 +90,18 @@ def suggest_with_knowledge(
     List[Dict[str, Any]]
         The list of suggested configurations.
     """
+    prefix_token = get_token_count_func()(
+        "Here are some tasks along with best hyper-parameter configurations to train a model on them.\n"
+    )
+    suffix_token = get_token_count_func()(
+        "\nGuidelines:{knowledge}\n\n\nBased on the examples and guidelines above, recommend {TOP_K} hyper-parameter configurations for a new classification dataset.\n\n{output}".format(
+            knowledge=knowledge,
+            TOP_K=str(TOP_K),
+            output=(
+                valid_example[: valid_example.index("\nConfiguration 1:")] + "\n\n"
+            ),
+        )
+    )
     example_prompt = PromptTemplate(
         input_variables=["input"],
         template="{input}",
@@ -84,6 +110,12 @@ def suggest_with_knowledge(
     example_selector = LengthBasedExampleSelector(
         examples=[{"input": example} for example in examples],
         example_prompt=example_prompt,
+        max_length=TOKEN_LIMIT
+        - prefix_token
+        - suffix_token
+        - TOKEN_COMPLETION_LIMIT
+        - RELAX_TOKEN,
+        get_text_length=get_token_count_func(),
     )
 
     dynamic_prompt = FewShotPromptTemplate(
@@ -117,7 +149,7 @@ def suggest_with_knowledge(
 
 def post_validation(
     space: Space, surrogate_fn: Callable, config_names: List[str]
-) -> str:
+) -> List[str]:
     """
     Post validation to generate knowledge.
 
@@ -132,17 +164,17 @@ def post_validation(
 
     Returns
     -------
-    str
-        The generated knowledge.
+    List[str]
+        The list of generated knowledge.
     """
-    knowledge = get_knowledge(space.space_id)
-    if knowledge is not None:
+    knowledges = get_knowledge(space)
+    if knowledges != "":
         print("Knowledge already exists.")
-        return knowledge
+        return knowledges
     quantile_infos = orjson.loads(space.quantile_info)
-    examples = gen_experience(space)
+    retrieved_tasks, examples = gen_experience(space)
     best_score = float("-inf")
-    knowledge = None
+    knowledges = None
     for _ in range(3):
         random.shuffle(examples)
         knowledge_candidate = gen_knowledge_candidate(examples)
@@ -168,15 +200,49 @@ def post_validation(
             score += _score
         if best_score < score:
             best_score = score
-            knowledge = knowledge_candidate
-    assert knowledge is not None, "Knowledge is not generated."
+            knowledges = knowledge_candidate
+    assert knowledges is not None, "Knowledge is not generated."
 
-    return knowledge
+    knowledges = split_knowledge(knowledges)
+    return knowledges
 
 
-def get_knowledge(space: Space):
+def get_knowledge(space: Space, task=None):
     try:
-        knowledge = Knowledge.get(Knowledge.space_id == space.space_id).knowledge
-        return knowledge
+        knowledges = Knowledge.select().where(
+            (Knowledge.space_id == space.space_id)
+            & ((Knowledge.task == task) | (Knowledge.task == None))
+        )
+        knowledge_str = ""
+        for i, knowledge in enumerate(knowledges):
+            knowledge_str += f"{i+1}. {knowledge.knowledge}\n\n"
+        return knowledge_str
     except:
-        return None
+        return ""
+
+
+def split_knowledge(knowledges: str) -> List[str]:
+    """
+    Split the knowledge into a list of knowledge.
+
+    Parameters
+    ----------
+    knowledges: str
+        The knowledge.
+
+    Returns
+    -------
+    List[str]
+        The list of knowledge.
+
+    Examples
+    --------
+    >>> split_knowledge("1. A\n2. B\n3. C\n")
+    ["A", "B", "C"]
+    """
+    return [
+        k.strip()
+        for k in re.findall(
+            r"\n\d+\.([\s\S]+?)(?=\n+\d+\.)", "\n" + knowledges + "\n999."
+        )
+    ]

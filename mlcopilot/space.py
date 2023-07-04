@@ -92,14 +92,15 @@ def create_space(
     space_desc = gen_space_description(history_df, space_desc)
     space = ingest_experience(history_df, task_desc, space_desc, space_id)
 
-    if not no_knowledge and get_knowledge(space) is None:
+    if not no_knowledge and get_knowledge(space) == "":
         from mlcopilot.knowledge import post_validation
         from mlcopilot.surrogate_utils import process_history_df, train_surrogate
 
         history_df_processed, config_names = process_history_df(history_df)
         surrogate_fn = train_surrogate(history_df_processed)
-        knowledge = post_validation(space, surrogate_fn, config_names)
-        Knowledge.create(space_id=space.space_id, knowledge=knowledge)
+        knowledges = post_validation(space, surrogate_fn, config_names)
+        for knowledge in knowledges:
+            Knowledge.create(space_id=space.space_id, knowledge=knowledge)
     database_proxy.commit()
     return space
 

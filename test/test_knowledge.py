@@ -1,9 +1,12 @@
+import re
+
 import pandas as pd
 import pytest
 
 from mlcopilot.knowledge import (
     gen_knowledge_candidate,
     post_validation,
+    split_knowledge,
     suggest_with_knowledge,
 )
 from mlcopilot.space import create_space, delete_space
@@ -69,7 +72,7 @@ def test_post_validation():
     surrogate = train_surrogate(history_df_processed)
     set_llms(suggest_model=MockSuggestLLM, knowledge_model=MockKnowledgeLLM)
     space_id = "__test_space__"
-    knowledge = post_validation(space, surrogate, config_names)
+    knowledges = post_validation(space, surrogate, config_names)
     delete_space(space_id)
-    assert knowledge == f"\n1.{MockKnowledgeLLM()('')}"
-    return knowledge
+    assert set(knowledges) == set(split_knowledge(f"1. {MockKnowledgeLLM()('')}"))
+    return knowledges
