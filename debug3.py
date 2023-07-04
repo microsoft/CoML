@@ -13,7 +13,7 @@ import pandas as pd
 from peewee import JOIN, fn 
 
 # from mlcopilot.constants import MLCOPILOT_DB_BACKEND, TOP_K
-from mlcopilot.orm import Solution, Task, database, database_proxy
+from mlcopilot.orm import Solution, Task, database, database_proxy, init_db
 from mlcopilot.space import create_tables, drop_tables
 from mlcopilot.utils import set_llms
 
@@ -22,9 +22,8 @@ drop_tables()
 create_tables()
 task_desc = "test task description"
 space = test_ingest_experience()
-database_proxy.commit()
-import time
-time.sleep(10)
+database_proxy.close()
+init_db()
 
 SolutionAlias = Solution.alias()
 order_key = Task.embedding.cosine_distance(task_desc)
