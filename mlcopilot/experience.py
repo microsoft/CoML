@@ -86,18 +86,17 @@ def ingest_experience(
 def _ingest_space(
     space_id: str, space_desc: str, quantile_info: Dict[str, List[float]]
 ) -> Space:
-    with database_proxy.atomic():
-        try:
-            space = Space.get(Space.space_id == space_id)
-            print(f"Space {space_id} already exists, skip ingestion.")
-            return space
-        except:
-            space = Space.create(
-                space_id=space_id,
-                desc=space_desc,
-                quantile_info=orjson.dumps(quantile_info, option=SAVE_OPTIONS),
-            )
-            print("Ingested space into database.")
+    try:
+        space = Space.get(Space.space_id == space_id)
+        print(f"Space {space_id} already exists, skip ingestion.")
+        return space
+    except:
+        space = Space.create(
+            space_id=space_id,
+            desc=space_desc,
+            quantile_info=orjson.dumps(quantile_info, option=SAVE_OPTIONS),
+        )
+        print("Ingested space into database.")
     # save db
     database_proxy.commit()
     return space
