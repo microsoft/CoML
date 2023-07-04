@@ -22,6 +22,7 @@ drop_tables()
 create_tables()
 task_desc = "test task description"
 space = test_ingest_experience()
+database_proxy.commit()
 # database_proxy.close()
 # init_db()
 

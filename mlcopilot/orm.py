@@ -78,7 +78,7 @@ if MLCOPILOT_DB_BACKEND == "sqlite":
     init_db_func = lambda: SqliteDatabase(MLCOPILOT_DB_PATH)
 elif MLCOPILOT_DB_BACKEND == "postgres":
     from peewee import PostgresqlDatabase
-    from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+    from psycopg2.extensions import ISOLATION_LEVEL_SERIALIZABLE
 
     init_db_func = lambda: PostgresqlDatabase(
         MLCOPILOT_DB_NAME,
@@ -86,7 +86,7 @@ elif MLCOPILOT_DB_BACKEND == "postgres":
         port=MLCOPILOT_DB_PORT,
         user=MLCOPILOT_DB_USER,
         password=MLCOPILOT_DB_PASSWORD,
-        isolation_level=ISOLATION_LEVEL_AUTOCOMMIT,
+        isolation_level=ISOLATION_LEVEL_SERIALIZABLE,
     )
 else:
     raise NotImplementedError(
