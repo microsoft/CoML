@@ -21,7 +21,8 @@ set_llms(embedding_model=MockEmbeddingModel)
 drop_tables()
 create_tables()
 task_desc = "test task description"
-space = test_ingest_experience()
+with database.atomic():
+    space = test_ingest_experience()
 
 SolutionAlias = Solution.alias()
 order_key = Task.embedding.cosine_distance(task_desc)
