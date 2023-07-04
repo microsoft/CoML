@@ -10,7 +10,7 @@ from test.test_experience import test_ingest_experience
 import numpy as np
 import pandas as pd
 # import pytest
-from peewee import JOIN, fn
+from peewee import JOIN, fn, database, database_proxy
 
 # from mlcopilot.constants import MLCOPILOT_DB_BACKEND, TOP_K
 from mlcopilot.orm import Solution, Task, database
@@ -21,10 +21,8 @@ set_llms(embedding_model=MockEmbeddingModel)
 drop_tables()
 create_tables()
 task_desc = "test task description"
-with database.atomic():
-    space = test_ingest_experience()
-
-database.commit()
+space = test_ingest_experience()
+database_proxy.commit()
 import time
 time.sleep(10)
 
