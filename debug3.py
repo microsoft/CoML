@@ -24,6 +24,10 @@ task_desc = "test task description"
 with database.atomic():
     space = test_ingest_experience()
 
+database.commit()
+import time
+time.sleep(10)
+
 SolutionAlias = Solution.alias()
 order_key = Task.embedding.cosine_distance(task_desc)
 subquery = (
