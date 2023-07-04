@@ -22,8 +22,8 @@ drop_tables()
 create_tables()
 task_desc = "test task description"
 space = test_ingest_experience()
-database_proxy.close()
-init_db()
+# database_proxy.close()
+# init_db()
 
 SolutionAlias = Solution.alias()
 order_key = Task.embedding.cosine_distance(task_desc)
