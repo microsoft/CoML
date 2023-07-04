@@ -93,7 +93,8 @@ else:
 
 
 def init_db():
-    database_proxy.initialize(init_db_func())
+    database = init_db_func()
+    database_proxy.initialize(database)
     conn = database_proxy.connection()
     if MLCOPILOT_DB_BACKEND == "postgres":
         register_vector(conn)
@@ -108,6 +109,8 @@ def init_db():
                 get_llm("embedding")().embed_query(text), dtype=np.float32
             )
             return np.dot(emb, text_emb).item()
+
+    return database
 
 
 class BaseModel(Model):
@@ -171,4 +174,4 @@ def import_db(tables: Dict[ModelBase, List[Dict[str, Any]]]) -> None:
                     pass
 
 
-init_db()
+database = init_db()
