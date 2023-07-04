@@ -78,6 +78,7 @@ if MLCOPILOT_DB_BACKEND == "sqlite":
     init_db_func = lambda: SqliteDatabase(MLCOPILOT_DB_PATH)
 elif MLCOPILOT_DB_BACKEND == "postgres":
     from peewee import PostgresqlDatabase
+    from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
     init_db_func = lambda: PostgresqlDatabase(
         MLCOPILOT_DB_NAME,
@@ -85,6 +86,7 @@ elif MLCOPILOT_DB_BACKEND == "postgres":
         port=MLCOPILOT_DB_PORT,
         user=MLCOPILOT_DB_USER,
         password=MLCOPILOT_DB_PASSWORD,
+        isolation_level=ISOLATION_LEVEL_AUTOCOMMIT,
     )
 else:
     raise NotImplementedError(
@@ -98,8 +100,6 @@ def init_db():
     conn = database_proxy.connection()
     if MLCOPILOT_DB_BACKEND == "postgres":
         register_vector(conn)
-        from psycopg2.extensions import ISOLATION_LEVEL_SERIALIZABLE
-        conn.set_isolation_level(ISOLATION_LEVEL_SERIALIZABLE)
 
     database_proxy.create_tables([Space, Task, Solution, Knowledge])
 
