@@ -132,7 +132,7 @@ class Task(BaseModel):
         ArrayField() if MLCOPILOT_DB_BACKEND == "sqlite" else VectorField(EMBED_DIM)
     )
     desc = TextField()
-    row_desc = TextField()
+    row_desc = TextField()  # TODO: remove. This is actually a prompt template.
 
 
 class Solution(BaseModel):
