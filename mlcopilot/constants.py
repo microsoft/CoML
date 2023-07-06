@@ -31,7 +31,7 @@ RELAX_TOKEN = 500  # RELAX_TOKEN is the number of tokens to void token limit
 MLCOPILOT_DB_BACKEND = os.environ.get("MLCOPILOT_DB_BACKEND", "sqlite")
 
 MLCOPILOT_DB_PATH = Path(
-    os.environ.get("MLCOPILOT_DB_PATH", Path.home() / ".mlcopilot" / "mlcopilot.db")
+    os.environ.get("MLCOPILOT_DB_PATH", Path.home() / ".mlcopilot" / "mlcopilot.sqlite")
 ).expanduser()
 
 MLCOPILOT_DB_NAME = os.environ.get("MLCOPILOT_DB_NAME", "mlcopilot")

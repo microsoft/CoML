@@ -18,7 +18,7 @@ MLCopilot is a tool to help you find the best models/hyperparametes for your tas
 ### Install requirements
 
 0. Clone this repo: `git clone REPO_URL; cd mlcopilot`
-1. Put assets/mlcopilot.db in your home directory: `cp assets/mlcopilot.db ~/.mlcopilot/mlcopilot.db`
+1. Put assets/mlcopilot.sqlite in your home directory: `cp assets/mlcopilot.sqlite ~/.mlcopilot/mlcopilot.sqlite`
 2. Install Python 3.8 or higher
 3. Install: `pip install .`. If you want to develop, use `pip install -e .[dev]` instead.
 
