@@ -170,7 +170,7 @@ def set_llms(
 
 
 def escape(text: str) -> str:
-    return re.sub("(?<!{)\{(.*?)\}(?!})", r"{{\1}}", text)
+    return re.sub("(\{|\})", r"\1\1", text)
 
 
 set_token_count_func(token_count)

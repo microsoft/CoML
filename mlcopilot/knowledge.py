@@ -94,7 +94,7 @@ def suggest_with_knowledge(
         "Here are some tasks along with best hyper-parameter configurations to train a model on them.\n"
     )
     suffix_token = get_token_count_func()(
-        "\nGuidelines:{knowledge}\n\n\nBased on the examples and guidelines above, recommend {TOP_K} hyper-parameter configurations for a new classification dataset.\n\n{output}".format(
+        "\nGuidelines:\n{knowledge}\n\n\nBased on the examples and guidelines above, recommend {TOP_K} hyper-parameter configurations for a new classification dataset.\n\n{output}".format(
             knowledge=knowledge,
             TOP_K=str(TOP_K),
             output=(
@@ -123,7 +123,7 @@ def suggest_with_knowledge(
         example_selector=example_selector,
         example_prompt=example_prompt,
         prefix="Here are some tasks along with best hyper-parameter configurations to train a model on them.\n",
-        suffix="\nGuidelines:{knowledge}\n\n\nBased on the examples and guidelines above, recommend {TOP_K} hyper-parameter configurations for a new classification dataset.\n\n{output}",
+        suffix="\nGuidelines:\n{knowledge}\n\n\nBased on the examples and guidelines above, recommend {TOP_K} hyper-parameter configurations for a new classification dataset.\n\n{output}",
         input_variables=["knowledge", "TOP_K", "output"],
     )
 

@@ -1,6 +1,7 @@
 import re
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+import colorama
 import orjson
 from langchain import FewShotPromptTemplate, PromptTemplate
 from langchain.prompts.example_selector import LengthBasedExampleSelector
@@ -123,6 +124,8 @@ def suggest(space: Space, task_desc: str) -> Tuple[Any, Union[str, None]]:
         input_variables=[],
     )
     prompt = dynamic_prompt.format()
+
+    print(colorama.Fore.GREEN + prompt + colorama.Style.RESET_ALL)
 
     response = llm(prompt)
     if quantile_infos:
