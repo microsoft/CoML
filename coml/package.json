@@ -17,6 +17,29 @@
         "command": "coml.helloWorld",
         "title": "Hello World"
       }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "comlContainer",
+          "title": "Machine Learning Copilot",
+          "icon": "media/dep.svg"
+        }
+      ]
+    },
+    "views": {
+      "comlContainer": [
+        {
+          "id": "coml",
+          "name": "CoML Chat"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "coml",
+        "contents": "Start asking machine learning questions!\n[Set OpenAI API key](command:coml.setOpenAIKey)"
+      }
     ]
   },
   "scripts": {
