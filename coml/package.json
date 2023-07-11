@@ -16,6 +16,10 @@
       {
         "command": "coml.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "coml.showHelloWorld",
+        "title": "Show Hello World"
       }
     ],
     "viewsContainers": {
