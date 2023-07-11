@@ -16,10 +16,6 @@
       {
         "command": "coml.helloWorld",
         "title": "Hello World"
-      },
-      {
-        "command": "coml.showHelloWorld",
-        "title": "Show Hello World"
       }
     ],
     "viewsContainers": {
@@ -34,7 +30,8 @@
     "views": {
       "comlContainer": [
         {
-          "id": "coml",
+          "type": "webview",
+          "id": "coml.comlView",
           "name": "CoML Chat"
         }
       ]
