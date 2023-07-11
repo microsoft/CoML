@@ -43,6 +43,10 @@
     ]
   },
   "scripts": {
+    "install:all": "npm install && cd app && npm install",
+    "start:webview": "cd app && npm run start",
+    "build:webview": "cd app && npm run build",
+    "test:webview": "cd app && npm run test",
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
