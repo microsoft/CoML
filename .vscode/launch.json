@@ -15,7 +15,7 @@
 			"outFiles": [
 				"${workspaceFolder}/coml/out/**/*.js"
 			],
-			// "preLaunchTask": "${defaultBuildTask}"
+			"preLaunchTask": "${defaultBuildTask}"
 		},
 		{
 			"name": "Extension Tests",

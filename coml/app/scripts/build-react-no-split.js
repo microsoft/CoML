@@ -12,6 +12,24 @@
 const rewire = require("rewire");
 const defaults = rewire("react-scripts/scripts/build.js");
 const config = defaults.__get__("config");
+console.log(config);
+
+// Make sure font is put into build/fonts rather than build/static/media.
+// This is magic. I don't know why it works.
+for (const rule of config.module.rules) {
+  if (!rule.oneOf) continue;
+  rule.oneOf[1].test.push(/\.(woff2?|eot|ttf|otf)(\?.*)?$/);
+}
+config.module.rules.push({
+  test: /\.(woff2?|eot|ttf|otf)(\?.*)?$/,
+  use: {
+    loader: "file-loader",
+    options: {
+      name: "[name].[ext]",
+      outputPath: "fonts/"
+    }
+  }
+});
 
 // Disable code splitting
 config.optimization.splitChunks = {
