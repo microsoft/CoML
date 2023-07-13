@@ -8,19 +8,21 @@ main {
 
 .chat-box {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
+  bottom: calc(var(--design-unit) * 2px);
+  left: calc(var(--design-unit) * 2px);
+  width: calc(100% - var(--design-unit) * 4px);
 }
 
 .chat-box .send {
   position: absolute;
   padding: calc(var(--design-unit) * 2px);
+  top: calc(var(--design-unit) * 0.3px);
   right: 0;
   width: calc(var(--design-unit) * 4px);
   height: calc(var(--design-unit) * 4px);
   color: var(--input-foreground);
   z-index: 100;
+  cursor: pointer;
 }
 
 .chat-box .text {

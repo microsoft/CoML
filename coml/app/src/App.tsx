@@ -15,7 +15,15 @@ function App() {
     const textInput = (textareaRef.current as any).value;
     console.log(textInput);
     (textareaRef.current as any).value = "";  // clear input
+    autosize((textareaRef.current as any).shadowRoot.querySelectorAll("textarea"));
     setMessages([...messages, new HumanMessage(textInput)]);
+  }
+
+  function captureKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.code === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      submit();
+    }
   }
 
   useEffect(() => {
@@ -50,7 +58,15 @@ function App() {
       {messageDisplay}
       <div className="chat-box">
         <span className="send codicon codicon-send" onClick={submit}></span>
-        <VSCodeTextArea resize="none" className="text" name="text" placeholder="Ask anything" ref={textareaRef} rows={1} />
+        <VSCodeTextArea
+          resize="none"
+          className="text"
+          name="text"
+          placeholder="Ask anything"
+          ref={textareaRef}
+          rows={1}
+          onKeyDown={captureKeyDown}
+        />
       </div>
     </main>
   );
