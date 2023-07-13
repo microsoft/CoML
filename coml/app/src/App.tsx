@@ -8,7 +8,7 @@ import autosize from "autosize";
 import { chatWithGPT } from "./chatml";
 import { HumanMessage, SystemMessage, BaseMessage } from "langchain/schema";
 
-function App() {
+function App(a)  {
   const [messages, setMessages] = useState<BaseMessage[]>([]);
 
   function submit() {
