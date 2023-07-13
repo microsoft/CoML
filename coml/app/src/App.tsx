@@ -5,17 +5,10 @@ import "@vscode/codicons/dist/codicon.css";
 import { useEffect, useRef, useState } from "react";
 import autosize from "autosize";
 
-import { chatWithGPT } from "./chat";
+import { chatWithGPT } from "./chatml";
 import { HumanMessage, SystemMessage, BaseMessage } from "langchain/schema";
 
 function App() {
-  function handleHowdyClick() {
-    vscode.postMessage({
-      command: "hello",
-      text: "Hey there partner! 🤠",
-    });
-  }
-
   const [messages, setMessages] = useState<BaseMessage[]>([]);
 
   function submit() {
