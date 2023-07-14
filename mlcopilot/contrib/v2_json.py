@@ -3,10 +3,17 @@ Schema:
 
 Solution {
     id: str
-    config: dict
     modules: Module[]
-    metrics: float | Metric[]
+    metrics: float | Metric[] | undefined
     source: "hpob" | "huggingface" | "kaggle"
+}
+
+Knowledge {
+    id: str
+    contextScope: Module[] // AND
+    subjectRole: str
+    subjectConstraint: Schema?
+    knowledge: str
 }
 
 Metric {
@@ -20,7 +27,7 @@ Metric {
 Module {
     role: "dataset" | "taskType" | "model" | "algorithm" | "verifiedAlgorithm" | "solutionSummary"
     purpose: str?
-    module: Module | str
+    module: Dataset | SolutionSummary | TaskType | Model | Algorithm | VerifiedAlgorithm | str
 }
 
 SolutionSummary {
@@ -48,6 +55,11 @@ Model {
 
 Algorithm {
     id: str?
+    config: dict
+}
+
+VerifiedAlgorithm {
+    id: str?
     schema_id: str
     config: dict
 }
@@ -72,8 +84,10 @@ Parameter {
 import glob
 import json
 import re
+import pandas as pd
 from pathlib import Path
-from mlcopilot.orm import Solution, Space, Task
+from mlcopilot.knowledge import split_knowledge
+from mlcopilot.orm import Solution, Space, Task, Knowledge
 
 from slugify import slugify
 
@@ -81,6 +95,8 @@ solutions_ = []
 datasets_ = []
 schemas_ = []
 task_types_ = []
+knowledges_ = []
+algorithms_ = []
 
 def hpob_solutions():
     import numpy as np
@@ -189,6 +205,9 @@ def hpob_solutions():
     schemas_.extend(schemas.values())
     datasets_.extend(contexts.values())
     solutions_.extend(solutions)
+
+    # for knowledge in Knowledge.select():
+
 
 
 def huggingface_solutions():
@@ -322,7 +341,9 @@ def huggingface_solutions():
                 },
                 {
                     "role": "solutionSummary",
-                    "module": model_card["summary"]
+                    "module": {
+                        "summary": model_card["summary"]
+                    }
                 }
             ] + used_dataset,
             "metrics": metrics,
@@ -335,8 +356,79 @@ def huggingface_solutions():
     solutions_.extend(solutions)
 
 
-# def kaggle_solutions():
+def kaggle_solutions():
+    root_dir = Path("assets/private")
+
+    # TODO: creating spaces
+
+    # Creating tasks and solutions
+    existing_ids = set()
+    converted_solutions = []
+    algorithms = {}
+    solutions = pd.read_json(root_dir / 'kaggle_solution.jsonl', lines=True)
+    for _, row in solutions.iterrows():
+        for i in range(1000):
+            sid = f"{row['source']}-{i + 1:03d}"
+            if sid not in existing_ids:
+                break
+        existing_ids.add(sid)
+
+        if row["api"] not in algorithms:
+            algorithms[row["api"]] = {
+                "id": slugify(row["api"]),
+                "api": row["api"],
+            }
+
+        converted_solutions.append({
+            "id": sid,
+            "modules": [
+                {
+                    "role": "algorithm",
+                    "purpose": "API",
+                    "module": algorithms[row["api"]]["id"]
+                },
+                {
+                    "role": "algorithm",
+                    "purpose": "API parameters",
+                    "module": row['parameters']
+                },
+                {
+                    "role": "solutionSummary",
+                    "module": {
+                        "summary": row['context']
+                    }
+                }
+            ],
+            "source": "kaggle"
+        })
+
+    print(list(algorithms.values())[:10])
+    print(converted_solutions[:10])
+    algorithms_.extend(algorithms.values())
+    solutions_.extend(converted_solutions)
+
+    # Creating knowledge
+    knowledges = {}
+    knowledge = json.loads((root_dir / 'kaggle_knowledge.json').read_text())
+    for space_name, knowledge_text in knowledge.items():
+        for kn in split_knowledge(knowledge_text):
+            for i in range(1000):
+                kid = f"{algorithms[space_name]['id']}-{i + 1:03d}"
+                if kid not in knowledges:
+                    break
+            knowledges[kid] = {
+                "id": kid,
+                "contextScope": [
+                    {"role": "algorithm", "module": algorithms[space_name]['id']},
+                ],
+                "subjectRole": "algorithm",
+                "knowledge": kn
+            }
+    knowledges_.extend(knowledges.values())
 
 
+kaggle_solutions()
 
-huggingface_solutions()
+Path("coml/app/public/data/solutions.json").write_text(json.dumps(solutions_, indent=2))
+Path("coml/app/public/data/algorithms.json").write_text(json.dumps(algorithms_, indent=2))
+Path("coml/app/public/data/knowledges.json").write_text(json.dumps(knowledges_, indent=2))
