@@ -12,7 +12,7 @@ Knowledge {
     id: str
     contextScope: Module[] // AND
     subjectRole: str
-    subjectConstraint: Schema?
+    subjectSchema: str?  // point to a schema
     knowledge: str
 }
 
@@ -149,7 +149,7 @@ def hpob_solutions():
             description += '. Environment: ' + ', '.join(packages) + '.'
             print(description)
 
-            slug = "-".join(description.split()[1].split(".")[2:]) + space.space_id
+            slug = "-".join(description.split()[1].split(".")[2:]) + "-" + space.space_id
 
             schemas[space.space_id] = {"id": slug, "description": description, "parameters": parameters}
 
@@ -173,7 +173,7 @@ def hpob_solutions():
             if task_id not in contexts:
                 continue
             X, y = np.array(task_data["X"]), np.array(task_data["y"]).flatten()
-            for idx in np.argsort(y + np.random.uniform(0, 1e-8))[::-1][:100]:
+            for idx in np.argsort(y + np.random.uniform(0, 1e-8))[::-1][:10]:  # TODO: change to 100
                 config = array_to_config(X[idx], space_id)
                 metric = y[idx]
                 schema_id = schemas[space_id]
@@ -206,8 +206,17 @@ def hpob_solutions():
     datasets_.extend(contexts.values())
     solutions_.extend(solutions)
 
-    # for knowledge in Knowledge.select():
-
+    knowledges = []
+    for knowledge in Knowledge.select():
+        if knowledge.space_id.isdigit():
+            knowledges.append({
+                "id": f"hpob-{schemas[knowledge.space_id]['id']}-{knowledge.id:04d}",
+                "contextScope": [],
+                "subjectRole": "verifiedAlgorithm",
+                "subjectSchema": schemas[knowledge.space_id]['id'],
+                "knowledge": knowledge.knowledge
+            })
+    knowledges_.extend(knowledges)
 
 
 def huggingface_solutions():
@@ -231,7 +240,7 @@ def huggingface_solutions():
     assert len(set([d["id"] for d in datasets.values()])) == len(datasets)
 
     print(list(datasets.values())[:10])
-    datasets_.extend(datasets)
+    datasets_.extend(datasets.values())
 
     tasks_desc = json.loads(Path("assets/private/tasks_from_huggingface.json").read_text())
     tasks = {
@@ -242,7 +251,7 @@ def huggingface_solutions():
         } for id, task in tasks_desc.items()
     }
     print(list(tasks.values()))
-    task_types_.extend(tasks)
+    task_types_.extend(tasks.values())
 
     def search_dataset_id(dataset_name):
         mappings = {
@@ -355,6 +364,27 @@ def huggingface_solutions():
     print(solutions[:10])
     solutions_.extend(solutions)
 
+    knowledges = {}
+    for knowledge in Knowledge.select():
+        if knowledge.space_id in ("model", "hp"):
+            task_name, dataset_name = knowledge.task_id.split("_", 1)
+            did = search_dataset_id(dataset_name)
+            for i in range(1000):
+                kid = f"huggingface-{knowledge.space_id}-{task_name}-{did}-{i + 1:03d}"
+                if kid not in knowledges:
+                    break
+            knowledges[kid] = {
+                "id": kid,
+                "contextScope": [
+                    {"role": "taskType", "module": task_name},
+                    {"role": "dataset", "module": did}
+                ],
+                "subjectRole": knowledge.space_id,
+                "knowledge": knowledge.knowledge
+            }
+
+    knowledges_.extend(knowledges.values())
+
 
 def kaggle_solutions():
     root_dir = Path("assets/private")
@@ -427,8 +457,13 @@ def kaggle_solutions():
     knowledges_.extend(knowledges.values())
 
 
+hpob_solutions()
+huggingface_solutions()
 kaggle_solutions()
 
-Path("coml/app/public/data/solutions.json").write_text(json.dumps(solutions_, indent=2))
-Path("coml/app/public/data/algorithms.json").write_text(json.dumps(algorithms_, indent=2))
-Path("coml/app/public/data/knowledges.json").write_text(json.dumps(knowledges_, indent=2))
+Path("coml/app/public/data/solutions.json").write_text(json.dumps(solutions_))
+Path("coml/app/public/data/algorithms.json").write_text(json.dumps(algorithms_))
+Path("coml/app/public/data/knowledges.json").write_text(json.dumps(knowledges_))
+Path("coml/app/public/data/datasets.json").write_text(json.dumps(datasets_))
+Path("coml/app/public/data/schemas.json").write_text(json.dumps(schemas_))
+Path("coml/app/public/data/taskTypes.json").write_text(json.dumps(task_types_))
