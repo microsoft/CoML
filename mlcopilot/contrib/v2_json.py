@@ -176,8 +176,8 @@ def hpob_solutions():
             for idx in np.argsort(y + np.random.uniform(0, 1e-8))[::-1][:10]:  # TODO: change to 100
                 config = array_to_config(X[idx], space_id)
                 metric = y[idx]
-                schema_id = schemas[space_id]
-                context_id = contexts[task_id]
+                schema_id = schemas[space_id]["id"]
+                context_id = contexts[task_id]["id"]
                 solution_id = f"hpob-{schema_id}-{context_id}-{idx + 1:03d}"
                 solutions.append({
                     "id": solution_id,
