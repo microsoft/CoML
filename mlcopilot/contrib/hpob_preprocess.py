@@ -11,6 +11,7 @@ assert root_dir.exists()
 descriptor = json.loads((root_dir / 'hpob/hpob-data/meta-dataset-descriptors.json').read_text())
 surrogates_stats = json.loads((root_dir / 'downloads/hpob/saved-surrogates/summary-stats.json').read_text())
 flows = json.loads((root_dir / 'hpob/description/flows.json').read_text())
+spaces = json.loads((root_dir / 'hpob/description/spaces.json').read_text())
 loaded_surrogates = {}
 
 # Type 1 (config): Human-readable config dict. Friendly to LLM. Type can be float, bool, str. Integer is not inferred.
@@ -55,6 +56,31 @@ def array_to_config(array: np.ndarray, search_space_id: str) -> dict:
                     result[variable] = intermediate
                 if dtypes[variable]['data_type'] == 'integer':
                     result[variable] = round(result[variable])
+
+    # fill-in default (even with condition)
+    result = {
+        name: result[name]
+        if name in result
+        else spaces[search_space_id][name]["default"]
+        for name in spaces[search_space_id] if name != "_meta" and
+        (name in result or not spaces[search_space_id][name]["condition"])
+    }
+
+    result = {
+        name: result[name]
+        if name in result
+        else spaces[search_space_id][name]["default"]
+        for name in spaces[search_space_id] if name != "_meta" and
+        (name in result or result[spaces[search_space_id][name]["condition"][0]] == spaces[search_space_id][name]["condition"][1])
+    }
+
+    # make sure within range
+    result = {
+        name: min(spaces[search_space_id][name]["low"], max(spaces[search_space_id][name]["high"], result[name]))
+        if "low" in spaces[search_space_id][name] and "high" in spaces[search_space_id][name]
+        else result[name]
+        for name in result
+    }
 
     return result
 

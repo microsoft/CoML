@@ -67,7 +67,7 @@ VerifiedAlgorithm {
 Schema {
     id: str?
     description: str
-    parameters: dict[str, Parameter]
+    parameters: list[Parameter]
 }
 
 Parameter {
@@ -83,13 +83,18 @@ Parameter {
 
 import glob
 import json
+import random
 import re
+import numpy as np
 import pandas as pd
 from pathlib import Path
 from mlcopilot.knowledge import split_knowledge
 from mlcopilot.orm import Solution, Space, Task, Knowledge
 
 from slugify import slugify
+
+random.seed(42)
+np.random.seed(42)
 
 solutions_ = []
 datasets_ = []
@@ -112,6 +117,7 @@ def hpob_solutions():
             description = lines[0].strip()[1:-1]
             parameters = {}
             for name, raw_schema in re.findall(r'\t\t\d+\. (.*?): (.*)', space.desc[:space.desc.find('Packeges')]):
+                print(raw_schema)
                 if raw_schema.startswith("choose from"):
                     schema = {
                         "name": name,
@@ -135,15 +141,24 @@ def hpob_solutions():
                     else:
                         low = float(match.group(2))
                         high = float(match.group(3))
-                    log_distribution = match.group(4) == "log"
+                    log_distributed = match.group(4) == "log"
                     schema = {
                         "name": name,
                         "dtype": dtype,
                         "categorical": False,
                         "low": low,
                         "high": high,
-                        "log_distribution": log_distribution
+                        "log_distributed": log_distributed
                     }
+                    if "; only when" in raw_schema:
+                        condition = re.search(r'only when (.*) = (.*)', raw_schema)
+                        schema["condition"] = [
+                            {
+                                "match": {
+                                    condition.group(1): condition.group(2)
+                                }
+                            }
+                        ]
                 parameters[name] = schema
             packages = [t.replace('_', ' ') for t in re.findall(r'\t\t- (.*)', space.desc[space.desc.find('Packeges'):])]
             description += '. Environment: ' + ', '.join(packages) + '.'
@@ -151,7 +166,7 @@ def hpob_solutions():
 
             slug = "-".join(description.split()[1].split(".")[2:]) + "-" + space.space_id
 
-            schemas[space.space_id] = {"id": slug, "description": description, "parameters": parameters}
+            schemas[space.space_id] = {"id": slug, "description": description, "parameters": list(parameters.values())}
 
     contexts = {}
 
@@ -190,7 +205,7 @@ def hpob_solutions():
                             "role": "verifiedAlgorithm",
                             "module": {
                                 # "id": solution_id,
-                                "schema_id": schema_id,
+                                "schema": schema_id,
                                 "config": config
                             }
                         }
@@ -272,6 +287,10 @@ def huggingface_solutions():
         used_dataset = []
         wrong = False
         for dataset_name, purpose in model_card["datasets"].items():
+            if not isinstance(purpose, str):
+                print("Purpose is not a string:", purpose)
+                wrong = True
+                continue
             try:
                 used_dataset.append({
                     "role": "dataset",
@@ -342,7 +361,7 @@ def huggingface_solutions():
                 {
                     "role": "algorithm",
                     "purpose": "Model training hyper-parameters.",
-                    "module": model_card["hyperparameters"]
+                    "module": {"config": model_card["hyperparameters"]}
                 },
                 {
                     "role": "taskType",
@@ -379,7 +398,7 @@ def huggingface_solutions():
                     {"role": "taskType", "module": task_name},
                     {"role": "dataset", "module": did}
                 ],
-                "subjectRole": knowledge.space_id,
+                "subjectRole": "model" if knowledge.space_id == "model" else "algorithm",
                 "knowledge": knowledge.knowledge
             }
 
@@ -406,7 +425,7 @@ def kaggle_solutions():
         if row["api"] not in algorithms:
             algorithms[row["api"]] = {
                 "id": slugify(row["api"]),
-                "api": row["api"],
+                "config": {"api": row["api"]}
             }
 
         converted_solutions.append({
@@ -420,7 +439,7 @@ def kaggle_solutions():
                 {
                     "role": "algorithm",
                     "purpose": "API parameters",
-                    "module": row['parameters']
+                    "module": {"config": row['parameters']}
                 },
                 {
                     "role": "solutionSummary",
