@@ -179,6 +179,7 @@ def verify_config(config, schema):
 for schema in schemas:
     check_valid_schema(schema)
 
+print(len(solutions))
 for solution in solutions:
     assert solution["source"] in ["kaggle", "huggingface", "hpob"]
     assert isinstance(solution["modules"], list)
