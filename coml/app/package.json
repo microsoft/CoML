@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@azure/data-tables": "^13.2.2",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
@@ -50,7 +51,9 @@
     "transform": {
       "^.+\\.[t|j]sx?$": "babel-jest"
     },
-    "transformIgnorePatterns": ["node_modules/(?!@vscode)/"]
+    "transformIgnorePatterns": [
+      "node_modules/(?!@vscode)/"
+    ]
   },
   "devDependencies": {
     "@types/autosize": "^4.0.1"
