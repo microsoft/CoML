@@ -5,10 +5,10 @@ import "@vscode/codicons/dist/codicon.css";
 import { useEffect, useRef, useState } from "react";
 import autosize from "autosize";
 
-import { chatWithGPT } from "./chatml";
+import { chatWithGPT, suggestMachineLearningModule } from "./chatml";
 import { HumanMessage, SystemMessage, BaseMessage } from "langchain/schema";
 
-function App(a)  {
+function App()  {
   const [messages, setMessages] = useState<BaseMessage[]>([]);
 
   function submit() {
@@ -28,7 +28,7 @@ function App(a)  {
 
   useEffect(() => {
     autosize((textareaRef.current as any).shadowRoot.querySelectorAll("textarea"));
-  });
+  }, []);
 
   useEffect(() => {
     if (messages.length > 0 && (messages[messages.length - 1] instanceof HumanMessage)) {
@@ -37,6 +37,18 @@ function App(a)  {
       });
     }
   }, [messages]);
+
+  useEffect(() => {
+    suggestMachineLearningModule([
+      {
+        role: "dataset",
+        module: {
+          name: "MNIST",
+          description: "A dataset of handwritten digits",
+        }
+      },
+    ], "verifiedAlgorithm", "rpart-preproc-4796");
+  }, [])
 
   const textareaRef = useRef(null);
 

@@ -317,10 +317,15 @@ def huggingface_solutions():
 
                 def _transform_metric(metric):
                     if isinstance(metric, (float, int)):
-                        return {"metric": float(metric)}
-                    if isinstance(metric, str):
-                        return {"metric": float(metric.split()[0]), "extra": metric}
-                    raise ValueError(metric)
+                        result = {"metric": float(metric)}
+                    elif isinstance(metric, str):
+                        result = {"metric": float(metric.split()[0]), "extra": metric}
+                    else:
+                        raise ValueError(metric)
+
+                    if result["metric"] != result["metric"] or (result["metric"] in (float("inf"), float("-inf"))):
+                        raise ValueError(metric)
+                    return result
 
                 if not isinstance(metric, list):
                     try:

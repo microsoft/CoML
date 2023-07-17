@@ -3,7 +3,7 @@ import { HumanMessage, SystemMessage, BaseMessage, AIMessage } from "langchain/s
 
 import { loadDatabase } from "./database";
 import { openAIApiKey } from "./apiKey";
-import { Module, Solution, VerifiedAlgorithm, Dataset, Model, TaskType } from "./types";
+import { Module, Solution, VerifiedAlgorithm, Dataset, Model, TaskType, Metric, Knowledge } from "./types";
 
 export async function chatWithGPT(messages: BaseMessage[]): Promise<AIMessage> {
     const model = new ChatOpenAI({
@@ -22,16 +22,21 @@ export async function suggestMachineLearningModule(
     existingModules: Module[],
     targetRole: string,
     targetSchemaId: string
-): Promise<Module> {
-    
+) {
+    const examples = findExamples(existingModules, targetRole, targetSchemaId);
+    const knowledges = findKnowledge(existingModules, targetRole, targetSchemaId);
+    console.log((await examples).slice(0, 10));
+    console.log((await knowledges).slice(0, 10));
 }
 
 interface Example {
     input: Module[];
     output: {
         candidate: Module;
+        metric: number;
         feedback?: string;
-    };
+    }[];
+    matchingScore: number;
 }
 
 async function findExamples(
@@ -41,58 +46,144 @@ async function findExamples(
 ): Promise<Example[]> {
     const database = await loadDatabase();
 
-    // Filter and compute matching scores.
-    const solutionsAsIO: { input: Module[], output: Module, matchingScore: number }[] = [];
+    // Step 1: Filter and compute matching scores.
+    const solutionsAsIO = new Map<string, Example>();
     for (const solution of database.solutions) {
-        const exampleOutputModule = solution.modules.find((module) => {
-            return module.role === targetRole && (
-                targetSchemaId === undefined || (
-                    module.role === "verifiedAlgorithm" &&
-                    (module.module as any).schema === targetSchemaId
-                )
-            )
-        });
+        // 1.a: Find an example output module.
+        const exampleOutputModule = findTargetModule(solution.modules, targetRole, targetSchemaId);
         if (exampleOutputModule === undefined) {
             continue;
         }
+
+        // 1.b: Must have at least one overlapping input role.
         const exampleInputModules = solution.modules.filter((module) => module !== exampleOutputModule);
-        let matchingScore = 0.;
-        for (const exampleInputModule of exampleInputModules) {
-            for (const existingModule of existingModules) {
-                matchingScore += moduleSimilarity(exampleInputModule, existingModule);
-            }
+        if (!hasOverlapModule(exampleInputModules, existingModules)) {
+            continue;
         }
-        solutionsAsIO.push({
-            input: exampleInputModules,
-            output: exampleOutputModule,
-            matchingScore: matchingScore
+
+        // 1.c: Compute matching score and adding to mapping.
+        const inputModulesAsJson = JSON.stringify(exampleInputModules);
+        if (!solutionsAsIO.has(inputModulesAsJson)) {
+            solutionsAsIO.set(inputModulesAsJson, {
+                input: exampleInputModules,
+                output: [],
+                matchingScore: moduleSimilarity(exampleInputModules, existingModules),
+            });
+        }
+        solutionsAsIO.get(inputModulesAsJson)!.output.push({
+            candidate: exampleOutputModule,
+            metric: typeof solution.metrics === "number" ? solution.metrics : 0.,
+            feedback: typeof solution.metrics !== "number" ? JSON.stringify(solution.metrics) : undefined
         });
     }
 
-    
+    // Step 2: Get the group of examples, sorted by matching score.
+    const unsortedExamples = Array.from(solutionsAsIO.values()).map((item) => {
+        item.output = item.output.sort((a, b) => ( b.metric - a.metric ));
+        return item;
+    });
+    return unsortedExamples.sort((a, b) => b.matchingScore - a.matchingScore);
 }
 
-function moduleSimilarity(module1: Module, module2: Module): number {
-    if (module1.role === module2.role) {
-        if (module1.role === "dataset") {
-            return textSimilarity(
-                (module1.module as Dataset).description,
-                (module2.module as Dataset).description
-            );
-        } else if (module1.role === "model") {
-            return textSimilarity(
-                (module1.module as Model).description,
-                (module2.module as Model).description
-            );
-        } else if (module1.role === "taskType") {
-            return textSimilarity(
-                (module1.module as TaskType).description,
-                (module2.module as TaskType).description
-            );
+async function findKnowledge(
+    existingModules: Module[],
+    targetRole: string,
+    targetSchemaId: string | undefined
+): Promise<Knowledge[]> {
+    const knowledges: { knowledge: Knowledge, matchingScore: number }[] = [];
+    const database = await loadDatabase();
+    for (const knowledge of database.knowledges) {
+        // Skip those with un-matching target role or un-matching target schema.
+        if (knowledge.subjectRole !== targetRole || (
+            targetSchemaId !== undefined &&
+            knowledge.subjectSchema !== targetSchemaId
+        )) {
+            continue;
         }
-        // Ignore other types of modules.
+
+        // Skip those with no similarity at all.
+        if (!isWithinScope(knowledge.contextScope, existingModules)) {
+            continue;
+        }
+        // Similarity is currently defined as the matched scope length.
+        const similarity = knowledge.contextScope.length;
+        knowledges.push({
+            knowledge: knowledge,
+            matchingScore: similarity
+        });
     }
-    return 0.;
+    return knowledges.sort((a, b) => b.matchingScore - a.matchingScore).map((a) => a.knowledge);
+}
+
+function findTargetModule(
+    modules: Module[],
+    targetRole: string,
+    targetSchemaId: string | undefined
+): Module | undefined {
+    return modules.find((module) => {
+        return module.role === targetRole && (
+            targetSchemaId === undefined || (
+                module.role === "verifiedAlgorithm" &&
+                (module.module as any).schema === targetSchemaId
+            )
+        )
+    });
+}
+
+function hasOverlapModule(modules1: Module[], modules2: Module[]): boolean {
+    // In case of no overlapping, similarity can be directly skipped.
+    for (const m1 of modules1) {
+        for (const m2 of modules2) {
+            if (m1.role === m2.role) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function isWithinScope(modules1: Module[], modules2: Module[]): boolean {
+    // Check if all modules in modules1 are within modules2.
+    for (const m1 of modules1) {
+        const matchedModule = modules2.find((m2) => (
+            m2.role === m1.role && (
+                (typeof m2.module === "string" && m2.module === m1.module) ||
+                (typeof m2.module === "object" && m2.module.id === m1.module)
+            )
+        ));
+        if (matchedModule === undefined) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function moduleSimilarity(modules1: Module[], modules2: Module[]): number {
+    let matchingScore = 0.;
+    for (const m1 of modules1) {
+        for (const m2 of modules2) {
+            if (m1.role === m2.role) {
+                if (m1.role === "dataset") {
+                    return textSimilarity(
+                        (m1.module as Dataset).description,
+                        (m2.module as Dataset).description
+                    );
+                } else if (m1.role === "model") {
+                    return textSimilarity(
+                        (m1.module as Model).description,
+                        (m2.module as Model).description
+                    );
+                } else if (m1.role === "taskType") {
+                    return textSimilarity(
+                        (m1.module as TaskType).description,
+                        (m2.module as TaskType).description
+                    );
+                }
+                // Ignore other types of modules.
+            }
+        }
+    }
+    return matchingScore;
 }
 
 function textSimilarity(text1: string, text2: string): number {
