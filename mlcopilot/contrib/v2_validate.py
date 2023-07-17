@@ -75,7 +75,7 @@ Parameter {
     choices: str[]?
     low: float?
     high: float?
-    log_distributed: bool?
+    logDistributed: bool?
     condition: list[Condition]
 }
 
@@ -150,7 +150,7 @@ def check_valid_schema(schema):
             else:
                 assert isinstance(parameter["low"], float)
                 assert isinstance(parameter["high"], float)
-            assert isinstance(parameter["log_distributed"], bool)
+            assert isinstance(parameter["logDistributed"], bool)
         if "condition" in parameter:
             assert isinstance(parameter["condition"], list)
             for condition in parameter["condition"]:

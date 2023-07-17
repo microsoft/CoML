@@ -148,7 +148,7 @@ def hpob_solutions():
                         "categorical": False,
                         "low": low,
                         "high": high,
-                        "log_distributed": log_distributed
+                        "logDistributed": log_distributed
                     }
                     if "; only when" in raw_schema:
                         condition = re.search(r'only when (.*) = (.*)', raw_schema)
