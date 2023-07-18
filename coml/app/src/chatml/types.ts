@@ -46,7 +46,8 @@ export interface Parameter {
   low?: number;
   high?: number;
   logDistributed?: boolean;
-  condition: Condition[];
+  condition?: Condition[];
+  quantiles?: number[];
 }
 
 export interface Condition {

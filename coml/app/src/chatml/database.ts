@@ -1,4 +1,4 @@
-import { Solution, Algorithm, Dataset, Knowledge, Schema, TaskType } from "./types";
+import { Solution, Algorithm, Dataset, Knowledge, Schema, TaskType, Module } from "./types";
 
 export class Database {
   readonly solutions: Solution[];
@@ -7,6 +7,7 @@ export class Database {
   private algorithmsById: Map<string, Algorithm>;
   private datasetsById: Map<string, Dataset>;
   private taskTypesById: Map<string, TaskType>;
+  private schemasById: Map<string, Schema>;
 
   constructor(
     solutions: Solution[],
@@ -19,20 +20,10 @@ export class Database {
     this.algorithmsById = buildIdIndex(algorithms);
     this.datasetsById = buildIdIndex(datasets);
     this.taskTypesById = buildIdIndex(taskTypes);
+    this.schemasById = buildIdIndex(schemas);
 
     for (const solution of solutions) {
-      for (const module of solution.modules) {
-        if (typeof module.module === "string") {
-          // Expand nested modules
-          if (module.role === "algorithm" || module.role === "verifiedAlgorithm") {
-            module.module = retrieveFromIdIndex(this.algorithmsById, module.module);
-          } else if (module.role === "dataset") {
-            module.module = retrieveFromIdIndex(this.datasetsById, module.module);
-          } else if (module.role === "taskType") {
-            module.module = retrieveFromIdIndex(this.taskTypesById, module.module);
-          }
-        }
-      }
+      this.expandModules(solution.modules);
     }
 
     this.solutions = solutions;
@@ -50,6 +41,24 @@ export class Database {
 
   getTaskType(id: string): TaskType {
     return retrieveFromIdIndex(this.taskTypesById, id);
+  }
+
+  getSchema(id: string): Schema {
+    return retrieveFromIdIndex(this.schemasById, id);
+  }
+
+  expandModules(modules: Module[]) {
+    for (const module of modules) {
+      if (typeof module.module === "string") {
+        if (module.role === "algorithm" || module.role === "verifiedAlgorithm") {
+          module.module = this.getAlgorithm(module.module);
+        } else if (module.role === "dataset") {
+          module.module = this.getDataset(module.module);
+        } else if (module.role === "taskType") {
+          module.module = this.getTaskType(module.module);
+        }
+      }
+    }
   }
 }
 
@@ -80,7 +89,6 @@ function retrieveFromIdIndex<T extends HasId>(index: Map<string, T>, id: string)
   }
   return item;
 }
-
 
 export async function loadDatabase(): Promise<Database> {
   if (_database !== undefined) {

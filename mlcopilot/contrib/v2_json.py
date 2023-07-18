@@ -189,7 +189,7 @@ def hpob_solutions():
             if task_id not in contexts:
                 continue
             X, y = np.array(task_data["X"]), np.array(task_data["y"]).flatten()
-            for idx in np.argsort(y + np.random.uniform(0, 1e-8))[::-1][:100]:
+            for rank, idx in enumerate(np.argsort(y + np.random.uniform(0, 1e-8))[::-1][:100]):
                 config = array_to_config(X[idx], space_id)
                 metric = y[idx]
                 schema_id = schemas[space_id]["id"]
@@ -216,7 +216,7 @@ def hpob_solutions():
                     "schema": schema_id,
                     "source": "hpob"
                 }
-                if idx < 5:
+                if rank < 5:
                     solutions.append(solution)
                 space_solutions.append(config)  # for quantile
 

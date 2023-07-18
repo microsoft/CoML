@@ -40,15 +40,15 @@ function App()  {
 
   useEffect(() => {
     // prepareCache();
-    // suggestMachineLearningModule([
-    //   {
-    //     role: "dataset",
-    //     module: {
-    //       name: "MNIST",
-    //       description: "A dataset of handwritten digits",
-    //     }
-    //   },
-    // ], "verifiedAlgorithm", "rpart-preproc-4796");
+    suggestMachineLearningModule([
+      {
+        role: "dataset",
+        module: {
+          name: "MNIST",
+          description: "A dataset of handwritten digits",
+        }
+      },
+    ], "verifiedAlgorithm", "rpart-preproc-4796");
     // suggestMachineLearningModule([
     //   {
     //     role: "model",
@@ -65,10 +65,10 @@ function App()  {
     //     }
     //   }
     // ], "algorithm")
-    suggestMachineLearningModule([
-      {"role": "taskType", "module": "image-classification"},
-      {"role": "dataset", "module": "plantvillage"}
-    ], "algorithm")
+    // suggestMachineLearningModule([
+    //   {"role": "taskType", "module": "image-classification"},
+    //   {"role": "dataset", "module": "plantvillage"}
+    // ], "algorithm")
     // queryEmbedding("Hello world 2!");
   }, [])
 

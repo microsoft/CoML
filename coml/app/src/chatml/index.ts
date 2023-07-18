@@ -4,6 +4,7 @@ import { HumanMessage, SystemMessage, BaseMessage, AIMessage } from "langchain/s
 import { loadDatabase } from "./database";
 import { openAIApiKey } from "./apiKey";
 import { queryEmbedding, preprocessEmbeddings } from "./embedding";
+import { Example, generateHumanMessage } from "./prompt";
 import { Module, Solution, VerifiedAlgorithm, Dataset, Model, TaskType, Metric, Knowledge } from "./types";
 
 export async function chatWithGPT(messages: BaseMessage[]): Promise<AIMessage> {
@@ -41,7 +42,8 @@ export async function suggestMachineLearningModule(
   targetRole: string,
   targetSchemaId: string | undefined = undefined
 ) {
-  await expandModules(existingModules);
+  const database = await loadDatabase();
+  database.expandModules(existingModules);
   console.log('Modules received.');
   console.log(existingModules);
   const examples = await findExamples(existingModules, targetRole, targetSchemaId);
@@ -50,32 +52,10 @@ export async function suggestMachineLearningModule(
   const knowledges = await findKnowledge(existingModules, targetRole, targetSchemaId);
   console.log('Knowledge found.');
   console.log((await knowledges).slice(0, 10));
-}
 
-interface Example {
-  input: Module[];
-  output: {
-    candidate: Module;
-    metric: number;
-    feedback?: string;
-  }[];
-  matchingScore: number;
-}
-
-async function expandModules(modules: Module[]): Promise<Module[]> {
-  const database = await loadDatabase();
-  for (const module of modules) {
-    if (typeof module.module === "string") {
-      if (module.role === "algorithm" || module.role === "verifiedAlgorithm") {
-        module.module = database.getAlgorithm(module.module);
-      } else if (module.role === "dataset") {
-        module.module = database.getDataset(module.module);
-      } else if (module.role === "taskType") {
-        module.module = database.getTaskType(module.module);
-      }
-    }
-  }
-  return modules;
+  const targetSchema = targetSchemaId ? database.getSchema(targetSchemaId) : undefined;
+  const comlPrompt = await generateHumanMessage(examples, knowledges, existingModules, targetRole, targetSchema);
+  console.log("Prompt generated:\n\n" + comlPrompt);
 }
 
 async function findExamples(
