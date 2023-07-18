@@ -164,8 +164,9 @@ export async function generateHumanMessage(
   preservedOutputPerInput: number = 3,
   maxCharacters: number = 10000,
   knowledgeMaxCharacters: number = 1000,
-) {
-  let prefix = `Your task is to find a suitable ${roleMapping.get(targetRole)} for a machine learning pipeline.\n`;
+): Promise<string> {
+  const targetRoleName = roleMapping.get(targetRole)!;
+  let prefix = `Your task is to find a suitable ${targetRoleName} for a machine learning pipeline.\n`;
   if (existingModules.length > 0) {
     prefix += `The pipeline has already been partially constructed with the following components:\n`;
     for (const module of existingModules) {
@@ -175,9 +176,13 @@ export async function generateHumanMessage(
   prefix += "\n";
 
   let suffix = "\n";
+  suffix += `Your response should contain ${preservedOutputPerInput} candidate ${targetRoleName}s, `
+  suffix += "where each candidate is written in one line, and the most confident one is put upfront. "
+  suffix += "You should also strictly follow the following format:\n";
+  suffix += `${capitalize(targetRoleName)} [`;
+  suffix += Array.from(Array(preservedOutputPerInput).keys()).map(i => (i + 1).toString()).join("|") + "]: ";
   if (targetSchema) {
-    suffix += "Your response should strictly follow the following format:\n";
-    suffix += `Algorithm [index]: [parameterName] is [${Array.from(levelMapping.values()).join("|")}].\n\n`;
+    suffix += `[parameterName] is [${Array.from(levelMapping.values()).join("|")}].\n\n`;
     suffix += "The available parameters are as follows:\n"
     for (const parameter of targetSchema.parameters) {
       suffix += `- ${parameter.name}: ${parameter.dtype ? parameter.dtype + ". " : ""}`;
@@ -200,10 +205,14 @@ export async function generateHumanMessage(
       }
       suffix = suffix.trimEnd() + "\n";
     }
-    suffix += "\n"
+  } else if (targetRole === "algorithm") {
+    suffix += "[JSON string].\n";
+  } else {
+    suffix += "[string].\n";
   }
+  suffix += "\n"
   if (existingModules.length > 0) {
-    suffix += `Please be aware that the following components have already existed on the pipeline:\n`;
+    suffix += `Please take into consideration that the following components have already existed on the pipeline:\n`;
     for (const module of existingModules) {
       suffix += await moduleAsString(module);
     }
@@ -218,4 +227,16 @@ export async function generateHumanMessage(
     preservedOutputPerInput
   );
   return [prefix, examplePart, knowledgePart, suffix].join("\n");
+}
+
+export async function parseResponse(
+  response: string,
+  targetRole: string,
+  targetSchema: Schema | undefined
+): Promise<void> {
+  const targetRoleName = roleMapping.get(targetRole)!;
+  const findCandidateRegex = new RegExp(
+    `${capitalize(targetRoleName)} (\\d+):(( (.*?) is (.*?)\\.)+)`
+  );
+  response.matchAll(findCandidateRegex);
 }
