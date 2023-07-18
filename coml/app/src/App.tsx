@@ -5,7 +5,7 @@ import "@vscode/codicons/dist/codicon.css";
 import { useEffect, useRef, useState } from "react";
 import autosize from "autosize";
 
-import { chatWithGPT, suggestMachineLearningModule } from "./chatml";
+import { chatWithGPT, suggestMachineLearningModule, prepareCache } from "./chatml";
 import { HumanMessage, SystemMessage, BaseMessage } from "langchain/schema";
 
 function App()  {
@@ -39,6 +39,7 @@ function App()  {
   }, [messages]);
 
   useEffect(() => {
+    prepareCache();
     // suggestMachineLearningModule([
     //   {
     //     role: "dataset",
@@ -48,22 +49,22 @@ function App()  {
     //     }
     //   },
     // ], "verifiedAlgorithm", "rpart-preproc-4796");
-    suggestMachineLearningModule([
-      {
-        role: "model",
-        module: {
-          name: "ViT-Base",
-          description: "A transformer model for image classification",
-        }
-      },
-      {
-        role: "dataset",
-        module: {
-          name: "ImageNet",
-          description: "A dataset of images",
-        }
-      }
-    ], "algorithm")
+    // suggestMachineLearningModule([
+    //   {
+    //     role: "model",
+    //     module: {
+    //       name: "ViT-Base",
+    //       description: "A transformer model for image classification",
+    //     }
+    //   },
+    //   {
+    //     role: "dataset",
+    //     module: {
+    //       name: "ImageNet",
+    //       description: "A dataset of images",
+    //     }
+    //   }
+    // ], "algorithm")
     // queryEmbedding("Hello world 2!");
   }, [])
 

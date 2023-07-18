@@ -3,7 +3,7 @@ import { HumanMessage, SystemMessage, BaseMessage, AIMessage } from "langchain/s
 
 import { loadDatabase } from "./database";
 import { openAIApiKey } from "./apiKey";
-import { queryEmbedding } from "./embedding";
+import { queryEmbedding, preprocessEmbeddings } from "./embedding";
 import { Module, Solution, VerifiedAlgorithm, Dataset, Model, TaskType, Metric, Knowledge } from "./types";
 
 export async function chatWithGPT(messages: BaseMessage[]): Promise<AIMessage> {
@@ -17,6 +17,23 @@ export async function chatWithGPT(messages: BaseMessage[]): Promise<AIMessage> {
     new SystemMessage("You are a helpful assistant."),
     ...messages
   ]);
+}
+
+export async function prepareCache() {
+  const database = await loadDatabase();
+  const texts: string[] = [];
+  for (const solution of database.solutions) {
+    for (const module of solution.modules) {
+      if (module.role === "dataset") {
+        texts.push((module.module as Dataset).description);
+      } else if (module.role === "model") {
+        texts.push((module.module as Model).description);
+      } else if (module.role === "taskType") {
+        texts.push((module.module as TaskType).description);
+      }
+    }
+  }
+  await preprocessEmbeddings(Array.from(new Set<string>(texts)));
 }
 
 export async function suggestMachineLearningModule(
@@ -186,6 +203,7 @@ async function moduleSimilarity(modules1: Module[], modules2: Module[]): Promise
   }
   return matchingScore;
 }
+
 
 async function textSimilarity(text1: string, text2: string): Promise<number> {
   const embed1 = await queryEmbedding(text1);

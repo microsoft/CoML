@@ -14,6 +14,17 @@ function getTableClient() {
   return new TableClient(blobUrl + blobSasToken, blobTableName);
 }
 
+function canonicalizeRowKey(rowKey: string): string {
+  return rowKey
+    .replaceAll("/", "%")
+    .replaceAll("\\", "%")
+    .replaceAll("#", "%")
+    .replaceAll("?", "%")
+    .replaceAll("\t", "%")
+    .replaceAll("\n", "%")
+    .replaceAll("\r", "%");
+}
+
 export async function prefetchEmbeddings(): Promise<void> {
   if (_prefetched !== undefined) {
     return;
@@ -27,8 +38,8 @@ export async function prefetchEmbeddings(): Promise<void> {
   }
 }
 
-export async function queryEmbedding(text: string): Promise<Float32Array> {
-  prefetchEmbeddings();
+export async function preprocessEmbeddings(texts: string[]): Promise<void> {
+  await prefetchEmbeddings();
   const client = getTableClient();
   const modelName = "text-embedding-ada-002";
 
@@ -37,8 +48,38 @@ export async function queryEmbedding(text: string): Promise<Float32Array> {
     modelName: modelName
   });
 
-  if (_prefetched && _prefetched.has(`${modelName}|${text}`)) {
-    return _prefetched.get(`${modelName}|${text}`)!;
+  const filteredTexts = texts.filter((text) => !_prefetched!.has(`${modelName}|${canonicalizeRowKey(text)}`));
+  console.log(texts.length, filteredTexts.length);
+  const batchSize = 32;
+  for (let index = 0; index < filteredTexts.length; index += batchSize) {
+    const rawEmbedArrays = await embedding.embedDocuments(filteredTexts.slice(index, index + batchSize));
+    const embedArrays = rawEmbedArrays.map((rawEmbedArray) => new Float32Array(rawEmbedArray));
+    for (let i = 0; i < embedArrays.length; i++) {
+      try {
+        await client.createEntity<TableEntity>({
+          partitionKey: modelName,
+          rowKey: canonicalizeRowKey(filteredTexts[index + i]),
+          embedding: new Uint8Array(embedArrays[i].buffer)
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }
+}
+
+export async function queryEmbedding(text: string): Promise<Float32Array> {
+  await prefetchEmbeddings();
+  const client = getTableClient();
+  const modelName = "text-embedding-ada-002";
+
+  const embedding = new OpenAIEmbeddings({
+    openAIApiKey: openAIApiKey,
+    modelName: modelName
+  });
+
+  if (_prefetched && _prefetched.has(`${modelName}|${canonicalizeRowKey(text)}`)) {
+    return _prefetched.get(`${modelName}|${canonicalizeRowKey(text)}`)!;
   }
 
   try {
@@ -53,7 +94,7 @@ export async function queryEmbedding(text: string): Promise<Float32Array> {
     try {
       await client.createEntity<TableEntity>({
         partitionKey: modelName,
-        rowKey: text,
+        rowKey: canonicalizeRowKey(text),
         embedding: new Uint8Array(embedArray.buffer)
       });
     } catch (e) {
