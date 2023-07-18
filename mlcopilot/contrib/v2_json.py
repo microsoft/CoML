@@ -184,17 +184,18 @@ def hpob_solutions():
     hpob_data = read_data()
     solutions = []
     for space_id, space_data in hpob_data.items():
+        space_solutions = []
         for task_id, task_data in space_data.items():
             if task_id not in contexts:
                 continue
             X, y = np.array(task_data["X"]), np.array(task_data["y"]).flatten()
-            for idx in np.argsort(y + np.random.uniform(0, 1e-8))[::-1][:10]:  # TODO: change to 100
+            for idx in np.argsort(y + np.random.uniform(0, 1e-8))[::-1][:100]:
                 config = array_to_config(X[idx], space_id)
                 metric = y[idx]
                 schema_id = schemas[space_id]["id"]
                 context_id = contexts[task_id]["id"]
                 solution_id = f"hpob-{schema_id}-{context_id}-{idx + 1:03d}"
-                solutions.append({
+                solution = {
                     "id": solution_id,
                     "modules": [
                         {
@@ -214,7 +215,18 @@ def hpob_solutions():
                     "context": context_id,
                     "schema": schema_id,
                     "source": "hpob"
-                })
+                }
+                if idx < 5:
+                    solutions.append(solution)
+                space_solutions.append(config)  # for quantile
+
+        for parameter in schemas[space_id]["parameters"]:
+            if parameter["categorical"]:
+                continue
+            numbers = [s[parameter["name"]] for s in space_solutions if parameter["name"] in s]
+            parameter["quantiles"] = np.quantile(numbers, [0.05 * i for i in range(21)]).tolist()
+            if parameter["dtype"] == "int":
+                parameter["quantiles"] = [int(q) for q in parameter["quantiles"]]
 
     print(len(solutions))
     schemas_.extend(schemas.values())

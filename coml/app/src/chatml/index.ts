@@ -22,7 +22,7 @@ export async function chatWithGPT(messages: BaseMessage[]): Promise<AIMessage> {
 export async function suggestMachineLearningModule(
   existingModules: Module[],
   targetRole: string,
-  targetSchemaId: string
+  targetSchemaId: string | undefined = undefined
 ) {
   const examples = findExamples(existingModules, targetRole, targetSchemaId);
   const knowledges = findKnowledge(existingModules, targetRole, targetSchemaId);

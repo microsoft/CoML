@@ -39,15 +39,31 @@ function App()  {
   }, [messages]);
 
   useEffect(() => {
+    // suggestMachineLearningModule([
+    //   {
+    //     role: "dataset",
+    //     module: {
+    //       name: "MNIST",
+    //       description: "A dataset of handwritten digits",
+    //     }
+    //   },
+    // ], "verifiedAlgorithm", "rpart-preproc-4796");
     suggestMachineLearningModule([
+      {
+        role: "model",
+        module: {
+          name: "ViT-Base",
+          description: "A transformer model for image classification",
+        }
+      },
       {
         role: "dataset",
         module: {
-          name: "MNIST",
-          description: "A dataset of handwritten digits",
+          name: "ImageNet",
+          description: "A dataset of images",
         }
-      },
-    ], "verifiedAlgorithm", "rpart-preproc-4796");
+      }
+    ], "algorithm")
     // queryEmbedding("Hello world 2!");
   }, [])
 

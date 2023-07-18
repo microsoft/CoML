@@ -76,7 +76,7 @@ def array_to_config(array: np.ndarray, search_space_id: str) -> dict:
 
     # make sure within range
     result = {
-        name: min(spaces[search_space_id][name]["low"], max(spaces[search_space_id][name]["high"], result[name]))
+        name: max(spaces[search_space_id][name]["low"], min(spaces[search_space_id][name]["high"], result[name]))
         if "low" in spaces[search_space_id][name] and "high" in spaces[search_space_id][name]
         else result[name]
         for name in result

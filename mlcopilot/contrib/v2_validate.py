@@ -77,6 +77,7 @@ Parameter {
     high: float?
     logDistributed: bool?
     condition: list[Condition]
+    quantiles: float[]?
 }
 
 Condition {
@@ -151,6 +152,7 @@ def check_valid_schema(schema):
                 assert isinstance(parameter["low"], float)
                 assert isinstance(parameter["high"], float)
             assert isinstance(parameter["logDistributed"], bool)
+            assert isinstance(parameter["quantiles"], list)
         if "condition" in parameter:
             assert isinstance(parameter["condition"], list)
             for condition in parameter["condition"]:
