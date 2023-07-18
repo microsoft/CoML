@@ -48,6 +48,7 @@ function App()  {
         }
       },
     ], "verifiedAlgorithm", "rpart-preproc-4796");
+    // queryEmbedding("Hello world 2!");
   }, [])
 
   const textareaRef = useRef(null);

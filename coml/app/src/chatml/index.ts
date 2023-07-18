@@ -3,6 +3,7 @@ import { HumanMessage, SystemMessage, BaseMessage, AIMessage } from "langchain/s
 
 import { loadDatabase } from "./database";
 import { openAIApiKey } from "./apiKey";
+import { queryEmbedding } from "./embedding";
 import { Module, Solution, VerifiedAlgorithm, Dataset, Model, TaskType, Metric, Knowledge } from "./types";
 
 export async function chatWithGPT(messages: BaseMessage[]): Promise<AIMessage> {
@@ -67,7 +68,7 @@ async function findExamples(
       solutionsAsIO.set(inputModulesAsJson, {
         input: exampleInputModules,
         output: [],
-        matchingScore: moduleSimilarity(exampleInputModules, existingModules),
+        matchingScore: await moduleSimilarity(exampleInputModules, existingModules),
       });
     }
     solutionsAsIO.get(inputModulesAsJson)!.output.push({
@@ -158,23 +159,23 @@ function isWithinScope(modules1: Module[], modules2: Module[]): boolean {
   return true;
 }
 
-function moduleSimilarity(modules1: Module[], modules2: Module[]): number {
+async function moduleSimilarity(modules1: Module[], modules2: Module[]): Promise<number> {
   let matchingScore = 0.;
   for (const m1 of modules1) {
     for (const m2 of modules2) {
       if (m1.role === m2.role) {
         if (m1.role === "dataset") {
-          return textSimilarity(
+          return await textSimilarity(
             (m1.module as Dataset).description,
             (m2.module as Dataset).description
           );
         } else if (m1.role === "model") {
-          return textSimilarity(
+          return await textSimilarity(
             (m1.module as Model).description,
             (m2.module as Model).description
           );
         } else if (m1.role === "taskType") {
-          return textSimilarity(
+          return await textSimilarity(
             (m1.module as TaskType).description,
             (m2.module as TaskType).description
           );
@@ -186,6 +187,23 @@ function moduleSimilarity(modules1: Module[], modules2: Module[]): number {
   return matchingScore;
 }
 
-function textSimilarity(text1: string, text2: string): number {
-  return 0.;
+async function textSimilarity(text1: string, text2: string): Promise<number> {
+  const embed1 = await queryEmbedding(text1);
+  const embed2 = await queryEmbedding(text2);
+  return (cosineSimilarity(embed1, embed2) + 1.) / 2.;
+}
+
+function cosineSimilarity(embed1: Float32Array, embed2: Float32Array): number {
+  if (embed1.length !== embed2.length) {
+    throw new Error("Embedding length mismatch.");
+  }
+  let dotProduct = 0.;
+  let norm1 = 0.;
+  let norm2 = 0.;
+  for (let i = 0; i < embed1.length; ++i) {
+    dotProduct += embed1[i] * embed2[i];
+    norm1 += embed1[i] * embed1[i];
+    norm2 += embed2[i] * embed2[i];
+  }
+  return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
 }
