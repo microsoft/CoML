@@ -16,13 +16,14 @@ function getTableClient() {
 
 function canonicalizeRowKey(rowKey: string): string {
   return rowKey
-    .replaceAll("/", "%")
+    .replaceAll("/", "%")  // https://stackoverflow.com/questions/47047107/azure-storage-size-of-partition-key-out-of-range
     .replaceAll("\\", "%")
     .replaceAll("#", "%")
     .replaceAll("?", "%")
     .replaceAll("\t", "%")
     .replaceAll("\n", "%")
-    .replaceAll("\r", "%");
+    .replaceAll("\r", "%")
+    .slice(0, 960);  // Key can't be too long
 }
 
 export async function prefetchEmbeddings(): Promise<void> {

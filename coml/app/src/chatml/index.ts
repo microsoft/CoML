@@ -41,9 +41,14 @@ export async function suggestMachineLearningModule(
   targetRole: string,
   targetSchemaId: string | undefined = undefined
 ) {
-  const examples = findExamples(existingModules, targetRole, targetSchemaId);
-  const knowledges = findKnowledge(existingModules, targetRole, targetSchemaId);
+  await expandModules(existingModules);
+  console.log('Modules received.');
+  console.log(existingModules);
+  const examples = await findExamples(existingModules, targetRole, targetSchemaId);
+  console.log('Examples found.');
   console.log((await examples).slice(0, 10));
+  const knowledges = await findKnowledge(existingModules, targetRole, targetSchemaId);
+  console.log('Knowledge found.');
   console.log((await knowledges).slice(0, 10));
 }
 
@@ -55,6 +60,22 @@ interface Example {
     feedback?: string;
   }[];
   matchingScore: number;
+}
+
+async function expandModules(modules: Module[]): Promise<Module[]> {
+  const database = await loadDatabase();
+  for (const module of modules) {
+    if (typeof module.module === "string") {
+      if (module.role === "algorithm" || module.role === "verifiedAlgorithm") {
+        module.module = database.getAlgorithm(module.module);
+      } else if (module.role === "dataset") {
+        module.module = database.getDataset(module.module);
+      } else if (module.role === "taskType") {
+        module.module = database.getTaskType(module.module);
+      }
+    }
+  }
+  return modules;
 }
 
 async function findExamples(
@@ -182,17 +203,17 @@ async function moduleSimilarity(modules1: Module[], modules2: Module[]): Promise
     for (const m2 of modules2) {
       if (m1.role === m2.role) {
         if (m1.role === "dataset") {
-          return await textSimilarity(
+          matchingScore += await textSimilarity(
             (m1.module as Dataset).description,
             (m2.module as Dataset).description
           );
         } else if (m1.role === "model") {
-          return await textSimilarity(
+          matchingScore += await textSimilarity(
             (m1.module as Model).description,
             (m2.module as Model).description
           );
         } else if (m1.role === "taskType") {
-          return await textSimilarity(
+          matchingScore += await textSimilarity(
             (m1.module as TaskType).description,
             (m2.module as TaskType).description
           );

@@ -39,7 +39,7 @@ function App()  {
   }, [messages]);
 
   useEffect(() => {
-    prepareCache();
+    // prepareCache();
     // suggestMachineLearningModule([
     //   {
     //     role: "dataset",
@@ -65,6 +65,10 @@ function App()  {
     //     }
     //   }
     // ], "algorithm")
+    suggestMachineLearningModule([
+      {"role": "taskType", "module": "image-classification"},
+      {"role": "dataset", "module": "plantvillage"}
+    ], "algorithm")
     // queryEmbedding("Hello world 2!");
   }, [])
 
