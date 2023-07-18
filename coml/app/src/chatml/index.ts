@@ -56,6 +56,18 @@ export async function suggestMachineLearningModule(
   const targetSchema = targetSchemaId ? database.getSchema(targetSchemaId) : undefined;
   const comlPrompt = await generateHumanMessage(examples, knowledges, existingModules, targetRole, targetSchema);
   console.log("Prompt generated:\n\n" + comlPrompt);
+
+  const model = new ChatOpenAI({
+    openAIApiKey: openAIApiKey,
+    temperature: 0.,
+    topP: 1,
+    modelName: "gpt-3.5-turbo"
+  });
+  const response = await model.call([
+    new SystemMessage("You are a data scientist who is good at solving machine learning problems."),
+    new HumanMessage(comlPrompt)
+  ]);
+  console.log("Response received:\n\n" + response.content);
 }
 
 async function findExamples(

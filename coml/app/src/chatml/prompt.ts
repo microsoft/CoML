@@ -54,11 +54,11 @@ function configToSemantic(config: any, schema: Schema) {
   let sentence = "";
   schema.parameters.forEach((parameter) => {
     if (parameter.name in config && config[parameter.name]) {
-      if (parameter.categorical) {
-        sentence += `${parameter.name} is ${config[parameter.name]}. `;
-      } else {
-        const level = numberToLevel(config[parameter.name], parameter.quantiles!, 5);
+      if (parameter.quantiles) {
+        const level = numberToLevel(config[parameter.name], parameter.quantiles, 5);
         sentence += `${parameter.name} is ${levelMapping.get(level)!}. `;
+      } else {
+        sentence += `${parameter.name} is ${config[parameter.name]}. `;
       }
     }
   });
@@ -85,6 +85,26 @@ async function moduleContentAsString(module: Module): Promise<string> {
   }
 }
 
+async function moduleAsString(module: Module, roleIndex: number | undefined = undefined): Promise<string> {
+  let moduleString = "";
+  const moduleRole = roleMapping.get(module.role);
+  if (moduleRole) {
+    moduleString += capitalize(moduleRole);
+    if (roleIndex !== undefined) {
+      moduleString += ` ${roleIndex + 1}`;
+    }
+    if (module.purpose) {
+      moduleString += ` (${module.purpose})`;
+    }
+    moduleString += ": ";
+    moduleString += await moduleContentAsString(module);
+    moduleString += "\n";
+  } else {
+    throw new Error(`Unknown module role: ${module.role}`);
+  }
+  return moduleString;
+}
+
 async function generateExampleMessage(
   examples: Example[],
   targetRole: string,
@@ -95,40 +115,21 @@ async function generateExampleMessage(
   for (const example of examples) {
     let exampleString = "";
     for (const input of example.input) {
-      const inputRole = roleMapping.get(input.role);
-      if (inputRole) {
-        exampleString += capitalize(inputRole);
-        if (input.purpose) {
-          exampleString += ` (${input.purpose})`;
-        }
-        exampleString += ": ";
-        exampleString += await moduleContentAsString(input);
-        exampleString += "\n";
-      } else {
-        throw new Error(`Unknown module role: ${input.role}`);
-      }
+      exampleString += await moduleAsString(input);
     }
     for (let index = 0; index < Math.min(preservedOutputPerInput, example.output.length); index++) {
-      const outputRole = roleMapping.get(targetRole);
-      if (outputRole) {
-        exampleString += capitalize(outputRole);
+      exampleString += await moduleAsString(
+        example.output[index].candidate,
+        example.output.length > 1 ? index : undefined
+      );
+      if (example.output[index].feedback) {
+        exampleString += "Feedback";
         if (example.output.length > 1) {
           exampleString += ` ${index + 1}`;
         }
         exampleString += ": ";
-        exampleString += await moduleContentAsString(example.output[index].candidate);
+        exampleString += example.output[index].feedback;
         exampleString += "\n";
-        if (example.output[index].feedback) {
-          exampleString += "Feedback";
-          if (example.output.length > 1) {
-            exampleString += ` ${index + 1}`;
-          }
-          exampleString += ": ";
-          exampleString += example.output[index].feedback;
-          exampleString += "\n";
-        }
-      } else {
-        throw new Error(`Unknown module role: ${targetRole}`);
       }
     }
     if (joinedExamples.length + exampleString.length > maxCharacters) {
@@ -136,7 +137,7 @@ async function generateExampleMessage(
     }
     joinedExamples += exampleString + "\n";
   }
-  return joinedExamples;
+  return "Here are several examples:\n\n" + joinedExamples;
 }
 
 function generateKnowledgeMessage(knowledge: Knowledge[], maxCharacters: number) {
@@ -164,11 +165,57 @@ export async function generateHumanMessage(
   maxCharacters: number = 10000,
   knowledgeMaxCharacters: number = 1000,
 ) {
+  let prefix = `Your task is to find a suitable ${roleMapping.get(targetRole)} for a machine learning pipeline.\n`;
+  if (existingModules.length > 0) {
+    prefix += `The pipeline has already been partially constructed with the following components:\n`;
+    for (const module of existingModules) {
+      prefix += await moduleAsString(module);
+    }
+  }
+  prefix += "\n";
+
+  let suffix = "\n";
+  if (targetSchema) {
+    suffix += "Your response should strictly follow the following format:\n";
+    suffix += `Algorithm [index]: [parameterName] is [${Array.from(levelMapping.values()).join("|")}].\n\n`;
+    suffix += "The available parameters are as follows:\n"
+    for (const parameter of targetSchema.parameters) {
+      suffix += `- ${parameter.name}: ${parameter.dtype ? parameter.dtype + ". " : ""}`;
+      if (parameter.categorical) {
+        suffix += "Choosing from " + parameter.choices!.join(", ") + ". ";
+      } else {
+        suffix += `Range from ${parameter.low!} to ${parameter.high!}. `;
+        if (parameter.logDistributed) {
+          suffix += "Log distributed. ";
+        }
+      }
+      if (parameter.condition) {
+        for (const condition of parameter.condition) {
+          if (condition.match) {
+            for (const [key, value] of condition.match.entries()) {
+              suffix += `Only when ${key} is ${value}. `;
+            }
+          }
+        }
+      }
+      suffix = suffix.trimEnd() + "\n";
+    }
+    suffix += "\n"
+  }
+  if (existingModules.length > 0) {
+    suffix += `Please be aware that the following components have already existed on the pipeline:\n`;
+    for (const module of existingModules) {
+      suffix += await moduleAsString(module);
+    }
+    suffix += "\n"
+  }
+
   const knowledgePart = generateKnowledgeMessage(knowledge, knowledgeMaxCharacters);
+  // Fill the rest.
   const examplePart = await generateExampleMessage(
     examples, targetRole,
-    maxCharacters - knowledgePart.length,
+    maxCharacters - knowledgePart.length - prefix.length - suffix.length,
     preservedOutputPerInput
   );
-  return examplePart + "\n" + knowledgePart;
+  return [prefix, examplePart, knowledgePart, suffix].join("\n");
 }
