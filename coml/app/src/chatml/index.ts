@@ -10,14 +10,91 @@ import { Module, Solution, VerifiedAlgorithm, Dataset, Model, TaskType, Metric, 
 export async function chatWithGPT(messages: BaseMessage[]): Promise<AIMessage> {
   const model = new ChatOpenAI({
     openAIApiKey: openAIApiKey,
-    temperature: 0.9,
+    temperature: 0.5,
     topP: 1,
     modelName: "gpt-3.5-turbo"
   });
+
+  const validSchemas = (await loadDatabase()).schemas.map(schema => `- ${schema.id}: ${schema.description}`).join("\n");
+  const functionDescription = {
+    name: "suggestMachineLearningModule",
+    description: "Get recommendations of a machine learning module given existing modules on the pipeline. " +
+      "A machine learning pipeline consists of multiple modules playing different roles. " +
+      "For example, a pipeline can consist of a dataset, a task type, a model, and an algorithm. " +
+      "This function recommends a module of the target role given existing modules on the pipeline.",
+    parameters: {
+      type: "object",
+      properties: {
+        existingModules: {
+          type: "array",
+          description: "Existing modules on the pipeline.",
+          items: {
+            type: "object",
+            properties: {
+              role: {
+                type: "string",
+                enum: ["dataset", "taskType", "model", "algorithm", "verifiedAlgorithm", "solutionSummary"]
+              },
+              purpose: {
+                type: "string",
+                description: "Why this module is used on the pipeline."
+              },
+              module: {
+                type: "object",
+                properties: {
+                  id: {
+                    type: "string",
+                    description: "ID of the module in the database. Do not use this field if you are not sure."
+                  },
+                  name: {
+                    type: "string",
+                    description: "Name of the dataset / model / task type. Only use this field when role is dataset/model/taskType."
+                  },
+                  description: {
+                    type: "string",
+                    description: "Description of the dataset / model / task type. Only use this field when role is dataset/model/taskType."
+                  },
+                  summary: {
+                    type: "string",
+                    description: "Summary of the solution. Only use this field when role is solutionSummary."
+                  },
+                  config: {
+                    type: "object",
+                    description: "Configuration of the algorithm. Only use this field when role is algorithm/verifiedAlgorithm."
+                  },
+                  schema: {
+                    type: "string",
+                    description: "Schema ID of the algorithm. Only use this field when role is verifiedAlgorithm."
+                  }
+                }
+              }
+            },
+            required: ["role", "module"]
+          },
+          minItems: 1
+        },
+        targetRole: {
+          type: "string",
+          description: "The role of the module to be recommended.",
+          enum: ["dataset", "taskType", "model", "algorithm", "verifiedAlgorithm", "solutionSummary"]
+        },
+        targetSchemaId: {
+          type: "string",
+          description: "This field should be used together with targetRole = verifiedAlgorithm." +
+            "The function will return an algorithm that is valid for the specified schema. " +
+            "Valid schema IDs and descriptions are:\n" + validSchemas
+        }
+      },
+      required: ["existingModules", "targetRole"]
+    },
+  };
+
   return await model.call([
     new SystemMessage("You are a helpful assistant."),
     ...messages
-  ]);
+  ], {
+    functions: [functionDescription]
+  });
 }
 
 export async function prepareCache() {

@@ -8,6 +8,12 @@ import autosize from "autosize";
 import { chatWithGPT, suggestMachineLearningModule, prepareCache } from "./chatml";
 import { HumanMessage, SystemMessage, BaseMessage } from "langchain/schema";
 
+async function chatNow(messages: BaseMessage[], setMessages: (messages: BaseMessage[]) => void) {
+  const response = await chatWithGPT(messages);
+  console.log(response);
+  setMessages([...messages, response]);
+}
+
 function App()  {
   const [messages, setMessages] = useState<BaseMessage[]>([]);
 
@@ -32,23 +38,21 @@ function App()  {
 
   useEffect(() => {
     if (messages.length > 0 && (messages[messages.length - 1] instanceof HumanMessage)) {
-      chatWithGPT(messages).then((response) => {
-        setMessages([...messages, response]);
-      });
+      chatNow(messages, setMessages);
     }
   }, [messages]);
 
   useEffect(() => {
     // prepareCache();
-    suggestMachineLearningModule([
-      {
-        role: "dataset",
-        module: {
-          name: "MNIST",
-          description: "A dataset of handwritten digits",
-        }
-      },
-    ], "verifiedAlgorithm", "rpart-preproc-4796");
+    // suggestMachineLearningModule([
+    //   {
+    //     role: "dataset",
+    //     module: {
+    //       name: "MNIST",
+    //       description: "A dataset of handwritten digits",
+    //     }
+    //   },
+    // ], "verifiedAlgorithm", "rpart-preproc-4796");
     // suggestMachineLearningModule([
     //   {
     //     role: "model",
