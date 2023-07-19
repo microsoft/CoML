@@ -1,5 +1,5 @@
 import { ChatOpenAI } from "langchain/chat_models/openai";
-import { HumanMessage, SystemMessage, BaseMessage, AIMessage } from "langchain/schema";
+import { HumanMessage, SystemMessage, BaseMessage, AIMessage, FunctionMessage } from "langchain/schema";
 
 import { loadDatabase } from "./database";
 import { openAIApiKey } from "./apiKey";
@@ -90,10 +90,11 @@ export async function chatWithGPT(messages: BaseMessage[]): Promise<AIMessage> {
   };
 
   return await model.call([
-    new SystemMessage("You are a helpful assistant."),
+    new SystemMessage("You are a helpful assistant who helps users write machine learning code."),
     ...messages
   ], {
-    functions: [functionDescription]
+    functions: [functionDescription],
+    function_call: messages[messages.length - 1] instanceof FunctionMessage ? "none" : "auto"
   });
 }
 
@@ -118,7 +119,7 @@ export async function suggestMachineLearningModule(
   existingModules: Module[],
   targetRole: string,
   targetSchemaId: string | undefined = undefined
-) {
+): Promise<Module[]> {
   const logTheme = "color: #0078d4";
   const promptTheme = "color: #038387";
   const responseTheme = "color: #ca5010";
@@ -153,6 +154,7 @@ export async function suggestMachineLearningModule(
   const parsedResponse = parseResponse(response.content, targetRole, targetSchema);
   console.log("%cResponse parsed:", logTheme);
   console.log(parsedResponse);
+  return parsedResponse;
 }
 
 async function findExamples(

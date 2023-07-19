@@ -6,6 +6,10 @@ main {
   height: 100%;
 }
 
+.container {
+  padding-bottom: calc(var(--design-unit) * 15px);
+}
+
 .chat-box {
   position: fixed;
   bottom: calc(var(--design-unit) * 2px);
