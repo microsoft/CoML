@@ -27,14 +27,22 @@ export async function chatWithGPT(messages: BaseMessage[]): Promise<AIMessage> {
       properties: {
         existingModules: {
           type: "array",
-          description: "Existing modules on the pipeline. It can be a dataset, a selected machine learning model, " +
-            "a certain task type, an overview of the whole ML solution, or an algorithm configuration.",
+          description: "Existing modules on the pipeline. It can be a dataset, a selected ML model, " +
+            "a certain task type, an overview of the whole ML solution, or an algorithm configuration. " +
+            "Existing modules MUST BE NOT EMPTY.",
           items: {
             type: "object",
             properties: {
               role: {
                 type: "string",
-                enum: ["dataset", "taskType", "model", "algorithm", "verifiedAlgorithm", "solutionSummary"]
+                enum: ["dataset", "taskType", "model", "algorithm", "verifiedAlgorithm", "solutionSummary"],
+                description: "The role of the module within the pipeline.\n" +
+                  "- dataset: Data used for training or testing.\n" +
+                  "- taskType: The type of the machine learning task, e.g., image classification.\n" +
+                  "- model: A program that fits onto the training data and make predictions.\n" +
+                  "- algorithm: Any ML component that can be expressed with a configuration, e.g., training hyper-parameters, data-preprocessing steps, etc.\n" +
+                  "- verifiedAlgorithm: An algorithm that strictly follows a schema and thus directly runnable.\n" +
+                  "- solutionSummary: An overview of the entire machine learning pipeline/solution."
               },
               purpose: {
                 type: "string",
@@ -91,7 +99,14 @@ export async function chatWithGPT(messages: BaseMessage[]): Promise<AIMessage> {
   };
 
   return await model.call([
-    new SystemMessage("You are a helpful assistant who helps users write machine learning code."),
+    new SystemMessage(
+      "Your task as a helpful assistant is to assist users in generating machine learning pipelines." +
+      "Your final goal is to generate runnable code snippets that can be directly adopted by users. " +
+      "To accomplish this, please utilize the `suggestMachineLearningModule` function as an intermediate step. " +
+      "When using this function, your should first identify the datasets, models, task types, " +
+      "and other existing components specified by the users, if provided. " +
+      "Additionally, you should determine the specific type of module that users are interested in."
+    ),
     ...messages
   ], {
     functions: [functionDescription],

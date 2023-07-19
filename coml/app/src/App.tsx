@@ -123,11 +123,26 @@ function App()  {
   const messageDisplay: JSX.Element[] = [];
   for (let i = 0; i < messages.length; ++i) {
     if (messages[i] instanceof HumanMessage) {
-      messageDisplay.push(<h3 key={`message-${i}-role`}>User</h3>);
+      messageDisplay.push(
+        <h3 className="role-name" key={`message-${i}-role`}>
+          <span className="account codicon codicon-account"></span>
+          User
+        </h3>
+      );
     } else if (messages[i] instanceof FunctionMessage) {
-      messageDisplay.push(<h3 key={`message-${i}-role`}>ML Expert</h3>);
+      messageDisplay.push(
+        <h3 className="role-name" key={`message-${i}-role`}>
+          <span className="mortar-board codicon codicon-mortar-board"></span>
+          ML Expert
+        </h3>
+      );
     } else if (messages[i] instanceof AIMessage) {
-      messageDisplay.push(<h3 key={`message-${i}-role`}>Assistant</h3>);
+      messageDisplay.push(
+        <h3 className="role-name" key={`message-${i}-role`}>
+          <span className="vm codicon codicon-vm"></span>
+          Assistant
+        </h3>
+      );
     }
     if (messages[i] instanceof AIMessage && messages[i].content === "" &&
         messages[i].additional_kwargs && messages[i].additional_kwargs.function_call
@@ -152,6 +167,8 @@ function App()  {
   const inspiringText = [
     "Recommend a config of rpart.preproc algorithm for MNIST dataset, a dataset of handwritten digits.",
     "I have a untrained BERT model. Suggest me a dataset to pretrain the model.",
+    "The task is to predict the final price of each home, given 79 explanatory variables describing (almost) every aspect " +
+    "of residential homes in Ames, Iowa. I want to use xgboost Regressor. How to configure its hyper-parameters?"
   ];
 
   return (

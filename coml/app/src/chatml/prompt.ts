@@ -205,7 +205,7 @@ export async function generateHumanMessage(
       if (parameter.condition) {
         for (const condition of parameter.condition) {
           if (condition.match) {
-            for (const [key, value] of condition.match.entries()) {
+            for (const [key, value] of Object.entries(condition.match)) {
               suffix += `Only when ${key} is ${value}. `;
             }
           }

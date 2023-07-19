@@ -10,6 +10,12 @@ pre {
   white-space: pre-wrap;
 }
 
+.role-name .codicon {
+  vertical-align: -0.15em;
+  margin-right: calc(var(--design-unit) * 2px);
+  font-size: 1.05em !important;
+}
+
 .link {
   font-weight: bold;
   line-height: 1.5;
