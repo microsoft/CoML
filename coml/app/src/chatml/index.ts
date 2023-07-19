@@ -4,7 +4,7 @@ import { HumanMessage, SystemMessage, BaseMessage, AIMessage } from "langchain/s
 import { loadDatabase } from "./database";
 import { openAIApiKey } from "./apiKey";
 import { queryEmbedding, preprocessEmbeddings } from "./embedding";
-import { Example, generateHumanMessage } from "./prompt";
+import { Example, generateHumanMessage, parseResponse } from "./prompt";
 import { Module, Solution, VerifiedAlgorithm, Dataset, Model, TaskType, Metric, Knowledge } from "./types";
 
 export async function chatWithGPT(messages: BaseMessage[]): Promise<AIMessage> {
@@ -42,20 +42,24 @@ export async function suggestMachineLearningModule(
   targetRole: string,
   targetSchemaId: string | undefined = undefined
 ) {
+  const logTheme = "color: #0078d4";
+  const promptTheme = "color: #038387";
+  const responseTheme = "color: #ca5010";
+
   const database = await loadDatabase();
   database.expandModules(existingModules);
-  console.log('Modules received.');
+  console.log('%cModules received.', logTheme);
   console.log(existingModules);
   const examples = await findExamples(existingModules, targetRole, targetSchemaId);
-  console.log('Examples found.');
+  console.log('%cExamples found.', logTheme);
   console.log((await examples).slice(0, 10));
   const knowledges = await findKnowledge(existingModules, targetRole, targetSchemaId);
-  console.log('Knowledge found.');
+  console.log('%cKnowledge found.', logTheme);
   console.log((await knowledges).slice(0, 10));
 
   const targetSchema = targetSchemaId ? database.getSchema(targetSchemaId) : undefined;
   const comlPrompt = await generateHumanMessage(examples, knowledges, existingModules, targetRole, targetSchema);
-  console.log("Prompt generated:\n\n" + comlPrompt);
+  console.log("%cPrompt generated:\n\n" + comlPrompt, promptTheme);
 
   const model = new ChatOpenAI({
     openAIApiKey: openAIApiKey,
@@ -67,7 +71,11 @@ export async function suggestMachineLearningModule(
     new SystemMessage("You are a data scientist who is good at solving machine learning problems."),
     new HumanMessage(comlPrompt)
   ]);
-  console.log("Response received:\n\n" + response.content);
+  console.log("%cResponse received:\n\n" + response.content, responseTheme);
+
+  const parsedResponse = parseResponse(response.content, targetRole, targetSchema);
+  console.log("%cResponse parsed:", logTheme);
+  console.log(parsedResponse);
 }
 
 async function findExamples(

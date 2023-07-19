@@ -21,6 +21,14 @@ const levelMapping = new Map<number, string>([
   [4, "very high"],
 ]);
 
+const levelInverseMapping = new Map<string, number>([
+  ["very low", 0],
+  ["low", 1],
+  ["medium", 2],
+  ["high", 3],
+  ["very high", 4],
+]);
+
 export interface Example {
   input: Module[];
   output: {
@@ -47,7 +55,7 @@ function numberToLevel(value: number, quantiles: number[], numLevels: number): n
 
 function levelToNumber(level: number, quantiles: number[], numLevels: number) {
   const quantilesPerLevel = (quantiles.length - 1) / numLevels;
-  return quantiles[Math.min(quantiles.length, Math.floor((level + 0.5) * quantilesPerLevel))];
+  return quantiles[Math.min(quantiles.length - 1, Math.floor((level + 0.5) * quantilesPerLevel))];
 }
 
 function configToSemantic(config: any, schema: Schema) {
@@ -229,14 +237,87 @@ export async function generateHumanMessage(
   return [prefix, examplePart, knowledgePart, suffix].join("\n");
 }
 
-export async function parseResponse(
+export function parseResponse(
   response: string,
   targetRole: string,
   targetSchema: Schema | undefined
-): Promise<void> {
+): Module[] {
   const targetRoleName = roleMapping.get(targetRole)!;
   const findCandidateRegex = new RegExp(
-    `${capitalize(targetRoleName)} (\\d+):(( (.*?) is (.*?)\\.)+)`
+    `${capitalize(targetRoleName)} (\\d+): (.*)`, "g"
   );
-  response.matchAll(findCandidateRegex);
+  const modules: Module[] = [];
+  if (targetSchema) {
+    for (const line of response.matchAll(findCandidateRegex)) {
+      const candidateAlgo: any = {};
+      for (const item of line[2].matchAll(/(.*?) is (.*?)\. ?/g)) {
+        const parameterName = item[1];
+        const parameterValue = item[2];
+        const parameter = targetSchema.parameters.find(p => p.name === parameterName);
+        if (!parameter) {
+          console.error(`Unknown parameter name: ${parameterName}. Skip.`);
+          continue;
+        }
+        if (parameter.categorical) {
+          if (!parameter.choices!.includes(parameterValue)) {
+            console.error(`Unknown parameter value: ${parameterValue}. Skip.`);
+            continue;
+          }
+          candidateAlgo[parameterName] = parameterValue;
+        } else if (parameter.quantiles) {
+          const level = levelInverseMapping.get(parameterValue);
+          if (level === undefined) {
+            console.error(`Unknown parameter value: ${parameterValue}. Skip.`);
+            continue;
+          }
+          const value = levelToNumber(level, parameter.quantiles, 5);
+          candidateAlgo[parameterName] = value;
+        } else {
+          const value = parseFloat(parameterValue);
+          if (isNaN(value)) {
+            console.error(`Unknown parameter value: ${parameterValue}. Skip.`);
+            continue;
+          } else if (value < parameter.low! || value > parameter.high!) {
+            console.error(`Parameter value out of range: ${parameterValue}. Skip.`);
+            continue;
+          }
+          candidateAlgo[parameterName] = value;
+        }
+      }
+      modules.push({
+        role: targetRole as any,
+        module: {
+          schema: targetSchema.id,
+          config: candidateAlgo
+        }
+      });
+    }
+  } else {
+    for (const line of response.matchAll(findCandidateRegex)) {
+      if (targetRole === "algorithm") {
+        modules.push({
+          role: targetRole as any,
+          module: {
+            config: JSON.parse(line[2])
+          }
+        });
+      } else if (targetRole === "solutionSummary") {
+        modules.push({
+          role: targetRole as any,
+          module: {
+            summary: line[2]
+          }
+        });
+      } else {
+        modules.push({
+          role: targetRole as any,
+          module: {
+            name: "UNKNOWN",
+            description: line[2]
+          }
+        });
+      }
+    }
+  }
+  return modules;
 }
