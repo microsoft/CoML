@@ -16,29 +16,37 @@ async function chatNow(messages: BaseMessage[], setMessages: (messages: BaseMess
     if (response.additional_kwargs && response.additional_kwargs.function_call) {
       const functionCall = response.additional_kwargs.function_call;
       if (functionCall.name === "suggestMachineLearningModule" && functionCall.arguments) {
-        console.log(`${logTheme}Function call: suggestMachineLearningModule. Arguments:\n${functionCall.arguments}`);
+        console.log("%cFunction call: suggestMachineLearningModule. Arguments:\n" + functionCall.arguments, logTheme);
         const args = JSON.parse(functionCall.arguments);
+        const consult_message = new AIMessage("Consulting ML expert: " + JSON.stringify(args))
+        setMessages([...messages, consult_message]);
         if ("existingModules" in args && "targetRole" in args) {
           const schema = args.targetSchemaId ? args.targetSchemaId : undefined;
           const result = await suggestMachineLearningModule(args.existingModules, args.targetRole, schema);
           if (result) {
-            setMessages([...messages, new FunctionMessage({
-              name: functionCall.name,
-              content: JSON.stringify(result)
-            }, "")]);
+            setMessages([
+              ...messages, 
+              consult_message,
+              new FunctionMessage({
+                name: functionCall.name,
+                content: JSON.stringify(result)
+              }, "")]);
           }
         }
         return;
       }
     } else {
-      console.log(`${logTheme}No function call`);
+      console.log("%cNo function call", logTheme);
       setMessages([...messages, response.content ? response : new AIMessage("No response.")]);
     }
     console.log(response);
     setMessages([...messages, response]);
   } catch (e) {
     console.error(e);
-    setMessages([...messages, new SystemMessage("Error: " + e)]);
+    vscode.postMessage({
+      command: "alert",
+      text: `CoML error: ${e}`
+    })
   }
 }
 
@@ -113,16 +121,20 @@ function App()  {
   const textareaRef = useRef(null);
 
   const messageDisplay: JSX.Element[] = [];
-  for (let i = 0; i < messages.length; ++i) {
-    if (messages[i] instanceof HumanMessage) {
+  const messageWithThinking = [...messages];
+  if (generating) {
+    messageWithThinking.push(new AIMessage("Thinking..."));
+  }
+  for (let i = 0; i < messageWithThinking.length; ++i) {
+    if (messageWithThinking[i] instanceof HumanMessage) {
       messageDisplay.push(<h3 key={`message-${i}-role`}>User</h3>);
-    } else if (messages[i] instanceof FunctionMessage) {
+    } else if (messageWithThinking[i] instanceof FunctionMessage) {
       messageDisplay.push(<h3 key={`message-${i}-role`}>ML Expert</h3>);
-    } else if (messages[i] instanceof AIMessage) {
+    } else if (messageWithThinking[i] instanceof AIMessage) {
       messageDisplay.push(<h3 key={`message-${i}-role`}>Assistant</h3>);
     }
-    messageDisplay.push(<ReactMarkdown key={`message-${i}-content`}>{messages[i].content}</ReactMarkdown>);
-    if (i < messages.length - 1) {
+    messageDisplay.push(<ReactMarkdown key={`message-${i}-content`}>{messageWithThinking[i].content}</ReactMarkdown>);
+    if (i < messageWithThinking.length - 1) {
       messageDisplay.push(<VSCodeDivider key={`message-${i}-divider`} />);
     }
   }
@@ -135,14 +147,14 @@ function App()  {
       <div className="container">
         {messageDisplay}
         {!generating && <div>
-          <VSCodeLink href="#" onClick={() => addHumanMessage(inspiringText)}>
+          <VSCodeLink className="link" href="#" onClick={() => addHumanMessage(inspiringText)}>
             <span className="lightbulb codicon codicon-lightbulb"></span>
-            {inspiringText}
+            <span className="text">{inspiringText}</span>
           </VSCodeLink>
           <br/>
-          {messages.length > 0 && <VSCodeLink href="#" onClick={() => setMessages([])}>
+          {messages.length > 0 && <VSCodeLink className="link" href="#" onClick={() => setMessages([])}>
             <span className="clear-all codicon codicon-clear-all"></span>
-            Restart conversation
+            <span className="text">Restart conversation</span>
           </VSCodeLink>}
         </div>}
       </div>

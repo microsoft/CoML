@@ -84,6 +84,12 @@ class CoMLPanelProvider implements vscode.WebviewViewProvider {
       "js",
       "main.js",
     ]);
+    // Data root
+    const dataUri = getUri(webview, this._extensionUri, [
+      "app",
+      "build",
+      "data"
+    ]);
     const nonce = getNonce();
 
     // Tip: Install the es6-string-html VS Code extension to enable code highlighting below
@@ -95,6 +101,7 @@ class CoMLPanelProvider implements vscode.WebviewViewProvider {
           <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
           <meta name="theme-color" content="#000000">
           <meta http-equiv="Content-Security-Policy" content="default-src *  data: blob: filesystem: about: ws: wss: 'unsafe-inline' 'unsafe-eval' 'unsafe-dynamic';           script-src * data: blob: 'unsafe-inline' 'unsafe-eval';           connect-src * data: blob: 'unsafe-inline';           img-src * data: blob: 'unsafe-inline';           frame-src * data: blob: ;  style-src * data: blob: 'unsafe-inline'; font-src * data: blob: 'unsafe-inline'; frame-ancestors * data: blob: 'unsafe-inline';">
+          <meta name="data-uri" content="${dataUri}">
           <style>
           @font-face {
             font-family: "codicon";

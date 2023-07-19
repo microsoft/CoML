@@ -6,6 +6,17 @@ main {
   height: 100%;
 }
 
+.link {
+  font-weight: bold;
+  line-height: 1.5;
+  margin-bottom: calc(var(--design-unit) * 2px);
+}
+
+.link .codicon {
+  margin-right: calc(var(--design-unit) * 2px);
+  vertical-align: -3px;
+}
+
 .container {
   padding-bottom: calc(var(--design-unit) * 15px);
 }
@@ -15,6 +26,7 @@ main {
   bottom: calc(var(--design-unit) * 2px);
   left: calc(var(--design-unit) * 2px);
   width: calc(100% - var(--design-unit) * 4px);
+  background-color: var(--background);
 }
 
 .chat-box .send {

@@ -94,13 +94,19 @@ export async function loadDatabase(): Promise<Database> {
   if (_database !== undefined) {
     return _database;
   }
+  let root = "./data";
+  const selector = document.querySelector('meta[name="data-uri"]');
+  if (selector) {
+    root = (selector as any).content;
+  }
+  console.log("Data root: " + root);
   const responses: [Algorithm[], Dataset[], Knowledge[], Schema[], Solution[], TaskType[]] = await Promise.all([
-    fetch("./data/algorithms.json").then((response) => response.json()),
-    fetch("./data/datasets.json").then((response) => response.json()),
-    fetch("./data/knowledges.json").then((response) => response.json()),
-    fetch("./data/schemas.json").then((response) => response.json()),
-    fetch("./data/solutions.json").then((response) => response.json()),
-    fetch("./data/taskTypes.json").then((response) => response.json()),
+    fetch(`${root}/algorithms.json`).then((response) => response.json()),
+    fetch(`${root}/datasets.json`).then((response) => response.json()),
+    fetch(`${root}/knowledges.json`).then((response) => response.json()),
+    fetch(`${root}/schemas.json`).then((response) => response.json()),
+    fetch(`${root}/solutions.json`).then((response) => response.json()),
+    fetch(`${root}/taskTypes.json`).then((response) => response.json()),
   ]);
   const [algorithms, datasets, knowledges, schemas, solutions, taskTypes] = responses;
   _database = new Database(
