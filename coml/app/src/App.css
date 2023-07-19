@@ -6,6 +6,10 @@ main {
   height: 100%;
 }
 
+pre {
+  white-space: pre-wrap;
+}
+
 .link {
   font-weight: bold;
   line-height: 1.5;
@@ -19,6 +23,11 @@ main {
 
 .container {
   padding-bottom: calc(var(--design-unit) * 15px);
+  width: 100%;
+}
+
+.progress-ring {
+  margin: calc(var(--design-unit) * 5px) auto;
 }
 
 .chat-box {

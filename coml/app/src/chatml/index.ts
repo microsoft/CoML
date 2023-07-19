@@ -27,7 +27,8 @@ export async function chatWithGPT(messages: BaseMessage[]): Promise<AIMessage> {
       properties: {
         existingModules: {
           type: "array",
-          description: "Existing modules on the pipeline.",
+          description: "Existing modules on the pipeline. It can be a dataset, a selected machine learning model, " +
+            "a certain task type, an overview of the whole ML solution, or an algorithm configuration.",
           items: {
             type: "object",
             properties: {

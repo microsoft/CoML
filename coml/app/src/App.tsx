@@ -1,5 +1,5 @@
 import { vscode } from "./utilities/vscode";
-import { VSCodeButton, VSCodeTextField, VSCodeTextArea, VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeButton, VSCodeTextField, VSCodeTextArea, VSCodeDivider, VSCodeLink, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import "./App.css";
 import "@vscode/codicons/dist/codicon.css";
 import { useEffect, useRef, useState } from "react";
@@ -18,7 +18,7 @@ async function chatNow(messages: BaseMessage[], setMessages: (messages: BaseMess
       if (functionCall.name === "suggestMachineLearningModule" && functionCall.arguments) {
         console.log("%cFunction call: suggestMachineLearningModule. Arguments:\n" + functionCall.arguments, logTheme);
         const args = JSON.parse(functionCall.arguments);
-        const consult_message = new AIMessage("Consulting ML expert: " + JSON.stringify(args))
+        const consult_message = response;
         setMessages([...messages, consult_message]);
         if ("existingModules" in args && "targetRole" in args) {
           const schema = args.targetSchemaId ? args.targetSchemaId : undefined;
@@ -29,7 +29,7 @@ async function chatNow(messages: BaseMessage[], setMessages: (messages: BaseMess
               consult_message,
               new FunctionMessage({
                 name: functionCall.name,
-                content: JSON.stringify(result)
+                content: JSON.stringify(result, null, 2)
               }, "")]);
           }
         }
@@ -121,37 +121,56 @@ function App()  {
   const textareaRef = useRef(null);
 
   const messageDisplay: JSX.Element[] = [];
-  const messageWithThinking = [...messages];
-  if (generating) {
-    messageWithThinking.push(new AIMessage("Thinking..."));
-  }
-  for (let i = 0; i < messageWithThinking.length; ++i) {
-    if (messageWithThinking[i] instanceof HumanMessage) {
+  for (let i = 0; i < messages.length; ++i) {
+    if (messages[i] instanceof HumanMessage) {
       messageDisplay.push(<h3 key={`message-${i}-role`}>User</h3>);
-    } else if (messageWithThinking[i] instanceof FunctionMessage) {
+    } else if (messages[i] instanceof FunctionMessage) {
       messageDisplay.push(<h3 key={`message-${i}-role`}>ML Expert</h3>);
-    } else if (messageWithThinking[i] instanceof AIMessage) {
+    } else if (messages[i] instanceof AIMessage) {
       messageDisplay.push(<h3 key={`message-${i}-role`}>Assistant</h3>);
     }
-    messageDisplay.push(<ReactMarkdown key={`message-${i}-content`}>{messageWithThinking[i].content}</ReactMarkdown>);
-    if (i < messageWithThinking.length - 1) {
+    if (messages[i] instanceof AIMessage && messages[i].content === "" &&
+        messages[i].additional_kwargs && messages[i].additional_kwargs.function_call
+    ) {
+      const functionCall = messages[i].additional_kwargs.function_call!;
+      messageDisplay.push(<div key={`message-${i}-content`}>
+        <p>Consulting ML expert with:</p>
+        <p>Function call: {functionCall.name}</p>
+        <p>Arguments:</p>
+        <pre>{functionCall.arguments}</pre>
+      </div>);
+    } else if (messages[i] instanceof FunctionMessage) {
+      messageDisplay.push(<pre key={`message-${i}-content`}>{messages[i].content}</pre>);
+    } else {
+      messageDisplay.push(<ReactMarkdown key={`message-${i}-content`}>{messages[i].content}</ReactMarkdown>);
+    }
+    if (i < messages.length - 1) {
       messageDisplay.push(<VSCodeDivider key={`message-${i}-divider`} />);
     }
   }
 
-  const inspiringText = "Recommend a config of rpart.preproc algorithm for MNIST dataset, a dataset of handwritten digits.";
+  const inspiringText = [
+    "Recommend a config of rpart.preproc algorithm for MNIST dataset, a dataset of handwritten digits.",
+    "I have a untrained BERT model. Suggest me a dataset to pretrain the model.",
+  ];
 
   return (
     <main>
       <h1>ChatML</h1>
       <div className="container">
         {messageDisplay}
-        {!generating && <div>
-          <VSCodeLink className="link" href="#" onClick={() => addHumanMessage(inspiringText)}>
-            <span className="lightbulb codicon codicon-lightbulb"></span>
-            <span className="text">{inspiringText}</span>
-          </VSCodeLink>
-          <br/>
+        {generating && <VSCodeProgressRing className="progress-ring" /> }
+        {!generating &&
+        <div>
+          {inspiringText.map((text, index) =>
+            <div key={`inspring-text-${index}`}>
+              <VSCodeLink className="link" href="#" onClick={() => addHumanMessage(text)}>
+                <span className="lightbulb codicon codicon-lightbulb"></span>
+                <span className="text">{text}</span>
+              </VSCodeLink>
+              <br/>
+            </div>
+          )}
           {messages.length > 0 && <VSCodeLink className="link" href="#" onClick={() => setMessages([])}>
             <span className="clear-all codicon codicon-clear-all"></span>
             <span className="text">Restart conversation</span>

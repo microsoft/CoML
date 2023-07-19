@@ -85,13 +85,20 @@ export async function queryEmbedding(text: string): Promise<Float32Array> {
 
   try {
     const entity = await client.getEntity<TableEntity>(modelName, text);
-    return new Float32Array(entity.embedding.buffer);
+    const embedArray = new Float32Array(entity.embedding.buffer);
+    if (_prefetched) {
+      _prefetched.set(`${modelName}|${canonicalizeRowKey(text)}`, embedArray);
+    }
+    return embedArray;
   } catch (e) {
     console.log(e);
     // Errors like entity not found.
     // Fall back to OpenAI.
     const rawEmbedArray = await embedding.embedQuery(text);
     const embedArray = new Float32Array(rawEmbedArray);
+    if (_prefetched) {
+      _prefetched.set(`${modelName}|${canonicalizeRowKey(text)}`, embedArray);
+    }
     try {
       await client.createEntity<TableEntity>({
         partitionKey: modelName,
