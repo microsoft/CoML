@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import autosize from "autosize";
 import ReactMarkdown from 'react-markdown'
 
-import { chatWithGPT, suggestMachineLearningModule, prepareCache } from "./chatml";
+import { chatWithGPT, suggestMachineLearningModule, prepareCache } from "coml/dist";
 import { HumanMessage, SystemMessage, BaseMessage, FunctionMessage, AIMessage } from "langchain/schema";
 
 async function chatNow(messages: BaseMessage[], setMessages: (messages: BaseMessage[]) => void) {

@@ -1,0 +1,19 @@
+{
+  "name": "coml",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "build": "npx tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.1.6"
+  },
+  "dependencies": {
+    "@azure/data-tables": "^13.2.2",
+    "langchain": "^0.0.113"
+  }
+}
