@@ -10,10 +10,10 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}/coml"
+				"--extensionDevelopmentPath=${workspaceFolder}/chat"
 			],
 			"outFiles": [
-				"${workspaceFolder}/coml/out/**/*.js"
+				"${workspaceFolder}/chat/out/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
 		},
@@ -22,11 +22,11 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}/coml",
-				"--extensionTestsPath=${workspaceFolder}/coml/out/test/suite/index"
+				"--extensionDevelopmentPath=${workspaceFolder}/chat",
+				"--extensionTestsPath=${workspaceFolder}/chat/out/test/suite/index"
 			],
 			"outFiles": [
-				"${workspaceFolder}/coml/out/test/**/*.js"
+				"${workspaceFolder}/chat/out/test/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
 		}

@@ -16,7 +16,7 @@
 				"isDefault": true
 			},
 			"options": {
-				"cwd": "${workspaceFolder}/coml"
+				"cwd": "${workspaceFolder}/chat"
 			}
 		}
 	]
