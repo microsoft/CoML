@@ -94,21 +94,7 @@ export async function loadDatabase(): Promise<Database> {
   if (_database !== undefined) {
     return _database;
   }
-  let root = "./data";
-  const selector = document.querySelector('meta[name="data-uri"]');
-  if (selector) {
-    root = (selector as any).content;
-  }
-  console.log("Data root: " + root);
-  const responses: [Algorithm[], Dataset[], Knowledge[], Schema[], Solution[], TaskType[]] = await Promise.all([
-    fetch(`${root}/algorithms.json`).then((response) => response.json()),
-    fetch(`${root}/datasets.json`).then((response) => response.json()),
-    fetch(`${root}/knowledges.json`).then((response) => response.json()),
-    fetch(`${root}/schemas.json`).then((response) => response.json()),
-    fetch(`${root}/solutions.json`).then((response) => response.json()),
-    fetch(`${root}/taskTypes.json`).then((response) => response.json()),
-  ]);
-  const [algorithms, datasets, knowledges, schemas, solutions, taskTypes] = responses;
+  const [algorithms, datasets, knowledges, schemas, solutions, taskTypes] = await loadFiles();
   _database = new Database(
     solutions,
     knowledges,
@@ -118,4 +104,37 @@ export async function loadDatabase(): Promise<Database> {
     taskTypes
   );
   return _database;
+}
+
+async function loadFiles(): Promise<[Algorithm[], Dataset[], Knowledge[], Schema[], Solution[], TaskType[]]> {
+  if (typeof process === 'object') {
+    // This is Node.js
+    const fs = await import('fs');
+    const url = await import('url');
+    const path = await import('path');
+    const root = path.join(path.dirname(url.fileURLToPath(import.meta.url)), '..', 'data');
+    return await Promise.all([
+      fs.promises.readFile(path.join(root, 'algorithms.json')).then((response) => JSON.parse(response.toString())),
+      fs.promises.readFile(path.join(root, 'datasets.json')).then((response) => JSON.parse(response.toString())),
+      fs.promises.readFile(path.join(root, 'knowledges.json')).then((response) => JSON.parse(response.toString())),
+      fs.promises.readFile(path.join(root, 'schemas.json')).then((response) => JSON.parse(response.toString())),
+      fs.promises.readFile(path.join(root, 'solutions.json')).then((response) => JSON.parse(response.toString())),
+      fs.promises.readFile(path.join(root, 'taskTypes.json')).then((response) => JSON.parse(response.toString())),
+    ]);
+  } else {
+    let root = "./data";
+    const selector = document.querySelector('meta[name="data-uri"]');
+    if (selector) {
+      root = (selector as any).content;
+    }
+    console.log("Data root: " + root);
+    return await Promise.all([
+      fetch(`${root}/algorithms.json`).then((response) => response.json()),
+      fetch(`${root}/datasets.json`).then((response) => response.json()),
+      fetch(`${root}/knowledges.json`).then((response) => response.json()),
+      fetch(`${root}/schemas.json`).then((response) => response.json()),
+      fetch(`${root}/solutions.json`).then((response) => response.json()),
+      fetch(`${root}/taskTypes.json`).then((response) => response.json()),
+    ]);
+  }
 }

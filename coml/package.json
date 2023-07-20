@@ -7,6 +7,7 @@
     "build": "npx tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "type": "module",
   "author": "",
   "license": "MIT",
   "devDependencies": {
