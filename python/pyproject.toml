@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "coml"
+version = "0.0.1"
+dependencies = [
+  "langchain",
+  "numpy",
+  "pandas",
+  "python-dotenv",
+  "tiktoken",
+]
+description = 'Machine Learning assistant.'
+readme = "../README.md"
+requires-python = ">=3.8"
+authors = [
+  { name = "CoML team", email = "coml@microsoft.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+]
+
+
+[project.urls]
+Documentation = "https://github.com/microsoft/coml#readme"
+Issues = "https://github.com/microsoft/coml/issues"
+Source = "https://github.com/microsoft/coml"
+
+[tool.hatch.build]
+include = [
+  "/coml"
+]
+
+[tool.black]
+line-length = 120
+target-version = ['py310']
+include = '\.pyi?$'
+packages = ["autogpt"]
+extend-exclude = '.+/(dist|.venv|venv|build)/.+'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 120
+sections = [
+  "FUTURE",
+  "STDLIB",
+  "THIRDPARTY",
+  "FIRSTPARTY",
+  "LOCALFOLDER"
+]
+skip = '''
+  .tox
+  __pycache__
+  *.pyc
+  .env
+  venv*/*
+  .venv/*
+  reports/*
+  dist/*
+'''
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "flake8",
+  "pre-commit",
+  "black",
+  "isort",
+]

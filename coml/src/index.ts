@@ -7,16 +7,9 @@ import { queryEmbedding, preprocessEmbeddings } from "./embedding";
 import { Example, generateHumanMessage, parseResponse } from "./prompt";
 import { Module, Solution, VerifiedAlgorithm, Dataset, Model, TaskType, Metric, Knowledge } from "./types";
 
-export async function chatWithGPT(messages: BaseMessage[]): Promise<AIMessage> {
-  const model = new ChatOpenAI({
-    openAIApiKey: openAIApiKey,
-    temperature: 0.5,
-    topP: 1,
-    modelName: "gpt-3.5-turbo"
-  });
-
+export async function getFunctionDescription() {
   const validSchemas = (await loadDatabase()).schemas.map(schema => `- ${schema.id}: ${schema.description}`).join("\n");
-  const functionDescription = {
+  return {
     name: "suggestMachineLearningModule",
     description: "Get recommendations of a machine learning module given existing modules on the pipeline. " +
       "A machine learning pipeline consists of multiple modules playing different roles. " +
@@ -97,6 +90,17 @@ export async function chatWithGPT(messages: BaseMessage[]): Promise<AIMessage> {
       required: ["existingModules", "targetRole"]
     },
   };
+}
+
+export async function chatWithGPT(messages: BaseMessage[]): Promise<AIMessage> {
+  const model = new ChatOpenAI({
+    openAIApiKey: openAIApiKey,
+    temperature: 0.5,
+    topP: 1,
+    modelName: "gpt-3.5-turbo"
+  });
+
+  const functionDescription = await getFunctionDescription();
 
   return await model.call([
     new SystemMessage(
