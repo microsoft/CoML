@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, List, TypedDict
+from typing import Any, Dict, List, TypedDict, Optional
 
 from .process_utils import run_subprocess
 
@@ -17,14 +17,21 @@ class FunctionDescription(TypedDict):
 def suggest_machine_learning_module(
     existing_modules: List[dict],
     target_role: str,
-    target_schema: str
+    target_schema: Optional[str]
 ) -> List[dict]:
-    return execute_coml_nodejs(
-        "suggestMachineLearningModule",
-        existing_modules,
-        target_role,
-        target_schema
-    )
+    if target_schema is None:
+        return execute_coml_nodejs(
+            "suggestMachineLearningModule",
+            existing_modules,
+            target_role
+        )
+    else:
+        return execute_coml_nodejs(
+            "suggestMachineLearningModule",
+            existing_modules,
+            target_role,
+            target_schema
+        )
 
 
 def get_function_description() -> FunctionDescription:

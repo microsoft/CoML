@@ -11,6 +11,7 @@ dependencies = [
   "pandas",
   "python-dotenv",
   "tiktoken",
+  "colorama",
 ]
 description = 'Machine Learning assistant.'
 readme = "../README.md"
