@@ -15,9 +15,9 @@ def test_agent():
     X = np.random.normal(size=(60000, 784))
     y = np.random.normal(size=(60000,))
     # agent("Train a ML model with rpart.preproc algorithm for MNIST dataset, a dataset of handwritten digits.", [X, y])
-    agent("Train a ML model for MNIST dataset, a dataset of handwritten digits.", [X, y])
+    # agent("Train a ML model for MNIST dataset, a dataset of handwritten digits.", [X, y])
 
     # agent("Use rpart.preproc algorithm to fit to a MNIST dataset, a dataset of handwritten digits.", [])
-    # agent("I have a untrained BERT model. Suggest me a dataset to pretrain the model.", [])
+    agent("Get a dataset to pretrain the model.", ["BERT()"])
     # agent("The task is to predict the final price of each home, given 79 explanatory variables describing (almost) every aspect " \
     #     "of residential homes in Ames, Iowa. I want to use xgboost Regressor. How to configure its hyper-parameters?", [])

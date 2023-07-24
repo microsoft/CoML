@@ -41,9 +41,9 @@ The user will present their goal and optionally the data (e.g., pandas DataFrame
 
 CODING_INSTRUCTION = """You're a data scientist. You're good at writing Python code to do data analysis, visualization, and machine learning. You can leverage the Python libraries such as `pandas`, `sklearn`, `matplotlib`, `seaborn`, and etc. to achieve user's request.
 
-Specifically, the user will present a goal and optionally the data (e.g., pandas DataFrame) they already have, and several (around 3) suggestions from a machine learning expert, ordered from most confidence to least. Your task is to write a Python function to solve the user's request, taking the given data as input and returning the goal as output. The suggestions from the machine learning expert are a good reference for you.
+Specifically, the user will present a goal and optionally the data (e.g., pandas DataFrame) they already have, and several (around 3) suggestions from a machine learning expert. Your task is to write a Python function to solve the user's request, taking the given data as input and returning the goal as output. The suggestions from the machine learning expert are ordered from the most confident to least. They only serve as a reference and you don't have to use them all.
 
-Here are some coding instructions:
+Some extra coding instructions:
 
 - The function should be wrapped by ``` before and after it.
 - Import necessary libraries at the start of the code.
