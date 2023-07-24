@@ -34,28 +34,7 @@ The function call will return a list of modules that will be recommended to the 
 The valid schema IDs and their descriptions (used in verifiedAlgorithm) are as follows:
 - rpart-preproc-4796: Learner mlr.classif.rpart.preproc from package(s) rpart. Environment: R 3.2.5, mlr 2.9, rpart 4.1.10.\n- svm-5527: Learner mlr.classif.svm from package(s) e1071. Environment: R 3.3.2, mlr 2.11, e1071 1.6.8.\n- rpart-5636: Learner mlr.classif.rpart from package(s) rpart. Environment: R 3.3.2, mlr 2.11, rpart 4.1.10.\n- rpart-5859: Learner mlr.classif.rpart from package(s) rpart. Environment: R 3.3.1, mlr 2.10, rpart 4.1.10.\n- glmnet-5860: Learner mlr.classif.glmnet from package(s) glmnet. Environment: R 3.3.1, mlr 2.10, glmnet 2.0.5.\n- svm-5891: Learner mlr.classif.svm from package(s) e1071. Environment: R 3.3.1, mlr 2.10, e1071 1.6.8.\n- xgboost-5906: Learner mlr.classif.xgboost from package(s) xgboost. Environment: R 3.3.1, mlr 2.10, xgboost 0.6.4.\n- ranger-5965: Learner mlr.classif.ranger from package(s) ranger. Environment: R 3.3.1, mlr 2.11, ranger 0.6.0.\n- glmnet-5970: Learner mlr.classif.glmnet from package(s) glmnet. Environment: R 3.3.1, mlr 2.11, glmnet 2.0.5.\n- xgboost-5971: Learner mlr.classif.xgboost from package(s) xgboost. Environment: R 3.3.1, mlr 2.11, xgboost 0.6.4.\n- glmnet-6766: Learner mlr.classif.glmnet from package(s) glmnet. Environment: R 3.3.2, mlr 2.11, glmnet 2.0.10.\n- xgboost-6767: Learner mlr.classif.xgboost from package(s) xgboost. Environment: R 3.3.2, mlr 2.11, xgboost 0.6.4.\n- ranger-6794: Learner mlr.classif.ranger from package(s) ranger. Environment: R 3.3.2, mlr 2.11, ranger 0.8.0.\n- ranger-7607: Learner mlr.classif.ranger from package(s) ranger. Environment: R 3.3.3, mlr 2.12, ranger 0.8.0.\n- ranger-7609: Learner mlr.classif.ranger from package(s) ranger. Environment: R 3.3.3, mlr 2.12, ranger 0.8.0.\n- ranger-5889: Learner mlr.classif.ranger from package(s) ranger. Environment: R 3.3.1, mlr 2.10, ranger 0.6.0.
 
-The user will present their goal and optionally the data (e.g., pandas DataFrame) they already have. Your only mission is to identify what the user wants and transforms them into the input arguments of `suggestMachineLearningModule`. Your response should strictly follow the following format. Please do not add any additional content to the response. If you think the request is not solvable by `suggestMachineLearningModule`, write "I don't know." as the response.
-
-```
-{
-    "existingModules": [
-        {
-            "role": "dataset",
-            "module": {
-                "name": "iris",
-                "description": "The iris dataset is a classic and very easy multi-class classification dataset.",
-            }
-        },
-        {
-            "role": "taskType",
-            "module": {
-                "name": "classification",
-                "description": "Classification task.",
-        }
-    ],
-    "targetRole": "algorithm",
-    "targetSchemaId": "rpart-preproc-4796"
-}
+The user will present their goal and optionally the data (e.g., pandas DataFrame) they already have. Your only mission is to identify what the user wants and transforms them into the input arguments of `suggestMachineLearningModule`. If you think the request is not solvable by `suggestMachineLearningModule`, you may not use it and write "I don't know." as the response.
 ```
 
 """
@@ -128,7 +107,7 @@ class AgentBase:
             _logger.info("%s(%s) User:\n%s%s", Fore.GREEN, self.__class__.__name__, message.content, Style.RESET_ALL)
         elif isinstance(message, AIMessage):
             if not message.content and "function_call" in message.additional_kwargs:
-                _logger.info("%s(%s) Assistant:\nFunction call:%sArguments:%s%s",
+                _logger.info("%s(%s) Assistant:\nFunction call: %s\nArguments: %s%s",
                              Fore.BLUE,
                              self.__class__.__name__,
                              message.additional_kwargs["function_call"].get("name"),
@@ -162,23 +141,32 @@ class CoMLAgent(AgentBase):
         return SystemMessage(content=COML_INSTRUCTION)
 
     def __call__(self, intention: CoMLIntention, arguments: List[Any]) -> Optional[List[dict]]:
-        self._record_message(HumanMessage(content=self._format_request(intention, arguments)))
-        result = self.llm(self._messages)
-        self._record_message(result)
+        if len(self._messages) > 1:
+            self.reset()
 
+        self._record_message(HumanMessage(content=self._format_request(intention, arguments)))
+        result = self.llm(
+            self._messages,
+            functions=[get_function_description()]
+        )
+        self._record_message(result)
         if result.content == "I don't know.":
             return None
 
-        parameters = json.loads(result.content)
-        if "existingModules" in parameters and "targetRole" in parameters:
-            schema = parameters["targetSchemaId"] if "targetSchemaId" in parameters else None
-            result = suggest_machine_learning_module(
-                parameters["existingModules"],
-                parameters["targetRole"],
-                schema
-            )
-            self._record_message(AIMessage(content=json.dumps(result, indent=2)))
-            return result
+        if ("function_call" in result.additional_kwargs and
+                result.additional_kwargs["function_call"].get("name") == "suggestMachineLearningModule" and
+                result.additional_kwargs["function_call"].get("arguments")):
+            args = json.loads(result.additional_kwargs["function_call"]["arguments"])
+            if "existingModules" in args and "targetRole" in args:
+                schema = args["targetSchemaId"] if "targetSchemaId" in args else None
+                result = suggest_machine_learning_module(args["existingModules"], args["targetRole"], schema)
+                self._log_message(
+                    FunctionMessage(
+                        name="suggestMachineLearningModule",
+                        content=json.dumps(result, indent=2)
+                    )
+                )
+                return result
 
         return None
 
