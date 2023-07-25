@@ -7,19 +7,18 @@ from langchain.chat_models import ChatOpenAI
 
 load_dotenv(Path("~/.mlcopilot/.env").expanduser())
 
-# def test_agent():
+def test_agent():
 #     load_dotenv(Path("~/.mlcopilot/.env").expanduser())
-#     llm = ChatOpenAI(temperature=0.5)
-#     coml_agent = CoMLAgent(llm)
-#     agent = CodingAgent(llm, coml_agent)
+    llm = ChatOpenAI(temperature=0.5)
+    coml_agent = CoMLAgent(llm)
+    agent = CodingAgent(llm, coml_agent)
 
-#     import numpy as np
-#     X = np.random.normal(size=(60000, 784))
-#     y = np.random.normal(size=(60000,))
+    import numpy as np
+    X = np.random.normal(size=(60000, 784))
+    y = np.random.normal(size=(60000,))
 
-#     ""Train a ML model with rpart.preproc algorithm for MNIST dataset, a dataset of handwritten digits.""
 
-#     agent("Train a ML model with rpart.preproc algorithm for MNIST dataset, a dataset of handwritten digits.", [X, y])
+    agent("Train a ML model with rpart.preproc algorithm for MNIST dataset, a dataset of handwritten digits.", X, y)
 
 
 #     # agent("Train a ML model for MNIST dataset, a dataset of handwritten digits.", [X, y])

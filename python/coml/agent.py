@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Union, Dict
 
 from colorama import Fore, Style
 from langchain.chat_models.base import BaseChatModel
@@ -163,25 +163,32 @@ class CodingAgent(AgentBase):
             SystemMessage(content=CODING_INSTRUCTION)
         ]
 
-    def _format_request(self, intention: CoMLIntention, arguments: List[Any],
-                        coml_response: Optional[List[dict]]) -> str:
-        if arguments:
-            request = f"User request: {intention}\nArguments:\n" + "\n".join([
-                f"  {i + 1}: {_smart_repr(arg)}" for i, arg in enumerate(arguments)
+    def _format_request(
+        self, intention: CoMLIntention,
+        positional_arguments: List[Any],
+        keyword_arguments: Dict[str, Any],
+        coml_response: Optional[List[dict]]
+    ) -> str:
+        request = f"User request: {intention}"
+        if positional_arguments:
+            request += "\nPositional arguments:\n" + "\n".join([
+                f"  {i}: {_smart_repr(arg)}" for i, arg in enumerate(positional_arguments)
             ])
-        else:
-            request = f"User request: {intention}\nNo input argument."
+        if keyword_arguments:
+            request += "\nKeyword arguments:\n" + "\n".join([
+                f"  {k}: {_smart_repr(v)}" for k, v in keyword_arguments.items()
+            ])
         if coml_response is not None:
             request += "\nML expert recommendations:\n" + json.dumps(coml_response, indent=2)
         return request
 
-    def __call__(self, intention: CoMLIntention, arguments: List[Any]):
+    def __call__(self, intention: CoMLIntention, *args: Any, **kwargs: Any):
         if not self._messages:
             self._record_message(self._system_message())
 
-        coml_response = self.coml_agent(intention, arguments)
+        coml_response = self.coml_agent(intention, *args, **kwargs)
         self._record_message(
-            HumanMessage(content=self._format_request(intention, arguments, coml_response))
+            HumanMessage(content=self._format_request(intention, list(args), kwargs, coml_response))
         )
 
         result = self.llm(self._messages)
