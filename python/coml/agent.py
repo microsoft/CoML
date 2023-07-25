@@ -8,36 +8,11 @@ from langchain.schema import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
 from .node import get_function_description, suggest_machine_learning_module
 # from .node_mock import get_function_description, suggest_machine_learning_module
+from .prompt import COML_INSTRUCTION, COML_EXAMPLES
 
 _logger = logging.getLogger(__name__)
 
 CoMLIntention = str
-
-COML_INSTRUCTION = """You are a machine learning assistant who is good at identifying user's needs and communicating with ML libraries.
-
-Specifically, the user is trying to complete a machine learning pipeline. A pipeline consists of multiple multiple modules (a.k.a. components), playing different roles. Some modules of the pipeline could already exist, while others remain to be constructed. For example, the pipeline could already have a dataset, a task type, and a model, but the user is still looking for an algorithm to train the model. The final goal is to recommend a module of the target role given existing modules on the pipeline.
-
-To accomplish this goal, you should be use is a tool called `suggestMachineLearningModule`. Given user's request, your task is to convert it into a function call of `suggestMachineLearningModule`, which accepts 3 input arguments:
-
-1. existingModules: Existing modules that have already been given in the user's request. It could be one of the following roles:
-    - dataset: Data used for training or testing. A dataset should have a "name" and a "description".
-    - taskType: The type of the machine learning task, e.g., image classification. A task type should have a "name" and a "description".
-    - model: A program that fits onto the training data and make predictions. A model should have a "name" and a "description".
-    - algorithm: Any ML component that can be expressed with a configuration, e.g., training hyper-parameters, data-preprocessing steps, etc. An algorithm should have a "config", which is a JSON object.
-    - verifiedAlgorithm: An algorithm that strictly follows a schema and thus directly runnable. Compared to algorithm, a verified algorithm should have an additional "schemaId", which is a string.
-    - solutionSummary: An overview of the entire machine learning pipeline/solution. A solution summary should have a "summary", which is a string.
-2. targetRole: The role of the module that you are trying to recommend. It could be one of the valid roles listed above.
-3. targetSchemaId: The schema ID of the algorithm that you are trying to recommend. This argument is optional, and should only be used when targetRole is "verifiedAlgorithm".
-
-The function call will return a list of modules that will be recommended to the user.
-
-The valid schema IDs and their descriptions (used in verifiedAlgorithm) are as follows:
-- rpart-preproc-4796: Learner mlr.classif.rpart.preproc from package(s) rpart. Environment: R 3.2.5, mlr 2.9, rpart 4.1.10.\n- svm-5527: Learner mlr.classif.svm from package(s) e1071. Environment: R 3.3.2, mlr 2.11, e1071 1.6.8.\n- rpart-5636: Learner mlr.classif.rpart from package(s) rpart. Environment: R 3.3.2, mlr 2.11, rpart 4.1.10.\n- rpart-5859: Learner mlr.classif.rpart from package(s) rpart. Environment: R 3.3.1, mlr 2.10, rpart 4.1.10.\n- glmnet-5860: Learner mlr.classif.glmnet from package(s) glmnet. Environment: R 3.3.1, mlr 2.10, glmnet 2.0.5.\n- svm-5891: Learner mlr.classif.svm from package(s) e1071. Environment: R 3.3.1, mlr 2.10, e1071 1.6.8.\n- xgboost-5906: Learner mlr.classif.xgboost from package(s) xgboost. Environment: R 3.3.1, mlr 2.10, xgboost 0.6.4.\n- ranger-5965: Learner mlr.classif.ranger from package(s) ranger. Environment: R 3.3.1, mlr 2.11, ranger 0.6.0.\n- glmnet-5970: Learner mlr.classif.glmnet from package(s) glmnet. Environment: R 3.3.1, mlr 2.11, glmnet 2.0.5.\n- xgboost-5971: Learner mlr.classif.xgboost from package(s) xgboost. Environment: R 3.3.1, mlr 2.11, xgboost 0.6.4.\n- glmnet-6766: Learner mlr.classif.glmnet from package(s) glmnet. Environment: R 3.3.2, mlr 2.11, glmnet 2.0.10.\n- xgboost-6767: Learner mlr.classif.xgboost from package(s) xgboost. Environment: R 3.3.2, mlr 2.11, xgboost 0.6.4.\n- ranger-6794: Learner mlr.classif.ranger from package(s) ranger. Environment: R 3.3.2, mlr 2.11, ranger 0.8.0.\n- ranger-7607: Learner mlr.classif.ranger from package(s) ranger. Environment: R 3.3.3, mlr 2.12, ranger 0.8.0.\n- ranger-7609: Learner mlr.classif.ranger from package(s) ranger. Environment: R 3.3.3, mlr 2.12, ranger 0.8.0.\n- ranger-5889: Learner mlr.classif.ranger from package(s) ranger. Environment: R 3.3.1, mlr 2.10, ranger 0.6.0.
-
-The user will present their goal and optionally the data (e.g., pandas DataFrame) they already have. Your only mission is to identify what the user wants and transforms them into the input arguments of `suggestMachineLearningModule`. If you think the request is not solvable by `suggestMachineLearningModule`, you may not use it and write "I don't know." as the response.
-```
-
-"""
 
 CODING_INSTRUCTION = """You're a data scientist. You're good at writing Python code to do data analysis, visualization, and machine learning. You can leverage the Python libraries such as `pandas`, `sklearn`, `matplotlib`, `seaborn`, and etc. to achieve user's request.
 
