@@ -13,21 +13,21 @@ The `suggestMachineLearningModule` function takes three input arguments and retu
 
 Input Arguments:
 1. `existingModules`: Existing modules provided in the user's request. Each module has a specified role, its purpose (why it's used) and contains relevant details such as name, description, and, in the case of verified algorithms, a unique schema ID.
-  - Role options: dataset, taskType, model, algorithm, verifiedAlgorithm, solutionSummary.
-  - Dataset: Data used for training or testing. Contains "name" and "description".
-  - Task Type: The type of the machine learning task, e.g., image classification. Contains "name" and "description".
-  - Model: A program that fits onto the training data and make predictions. Contains "name" and "description".
-  - Algorithm: Any ML component that can be expressed with a configuration, e.g., training hyper-parameters, data-preprocessing steps, etc. Contains "config", a JSON object representing the algorithm's configuration.
-  - Verified Algorithm: The config must strictly adhere to a schema. Contains "schemaId", a string representing the unique schema ID, in addition to "config".
-  - Solution Summary: Contains "summary", a string summarizing the entire ML pipeline/solution.
-2. targetRole: The role of the module that needs to be recommended. It can be any valid role from the list above.
-3. targetSchemaId (optional): This argument is only used when the targetRole is "verifiedAlgorithm". It represents the unique schema ID of the algorithm to be recommended.
+  - `role`: dataset, taskType, model, algorithm, verifiedAlgorithm, solutionSummary.
+  - `dataset`: Data used for training or testing. Contains "name" and "description".
+  - `taskType`: The type of the machine learning task, e.g., image classification. Contains "name" and "description".
+  - `model`: A program that fits onto the training data and make predictions. Contains "name" and "description".
+  - `algorithm`: Any ML component that can be expressed with a configuration, e.g., training hyper-parameters, data-preprocessing steps, etc. Contains "config", a JSON object representing the algorithm's configuration.
+  - `verifiedAlgorithm`: The config must strictly adhere to a schema. Contains "schemaId", a string representing the unique schema ID, in addition to "config".
+  - `solutionSummary`: Contains "summary", a string summarizing the entire ML pipeline/solution.
+2. `targetRole`: The role of the module that needs to be recommended. It can be any valid role from the list above. `verifiedAlgorithm` should be selected as the targetRole at a higher priority than other roles, if `targetSchemaId` is found to match one of the valid schema IDs below. 
+3. `targetSchemaId` (optional): This argument should only present when the targetRole is "verifiedAlgorithm". It represents the unique schema ID of the algorithm to be recommended.
 
 Output:
 The function call will return a list of modules recommended to the user, based on their specific requirements and the existing modules in their pipeline.
 
 Note:
-The valid schema IDs and their descriptions (used in verifiedAlgorithm) are as follows:
+The valid schema IDs and their descriptions (used in verifiedAlgorithm) are as follows.
 - rpart-preproc-4796: Learner mlr.classif.rpart.preproc from package(s) rpart. Environment: R 3.2.5, mlr 2.9, rpart 4.1.10.
 - svm-5527: Learner mlr.classif.svm from package(s) e1071. Environment: R 3.3.2, mlr 2.11, e1071 1.6.8.
 - rpart-5636: Learner mlr.classif.rpart from package(s) rpart. Environment: R 3.3.2, mlr 2.11, rpart 4.1.10.
@@ -86,13 +86,17 @@ COML_EXAMPLES: List[CoMLExample] = [
             "existingModules": [
                 {
                     "role": "dataset",
-                    "name": "Customer Reviews",
-                    "description": "This is a list of over 34,000 consumer reviews for Amazon products like the Kindle, Fire TV Stick, and more provided by Datafiniti's Product Database. The dataset includes basic product information, rating, review text, and more for each product."
+                    "module": {
+                        "name": "Customer Reviews",
+                        "description": "This is a list of over 34,000 consumer reviews for Amazon products like the Kindle, Fire TV Stick, and more provided by Datafiniti's Product Database. The dataset includes basic product information, rating, review text, and more for each product."
+                    }
                 },
                 {
                     "role": "taskType",
-                    "name": "text-classification",
-                    "description": "Text Classification is the task of assigning a label or class to a given text. Some use cases are sentiment analysis, natural language inference, and assessing grammatical correctness."
+                    "module": {
+                        "name": "text-classification",
+                        "description": "Text Classification is the task of assigning a label or class to a given text. Some use cases are sentiment analysis, natural language inference, and assessing grammatical correctness."
+                    }
                 }
             ],
             "targetRole": "algorithm"
@@ -107,13 +111,18 @@ COML_EXAMPLES: List[CoMLExample] = [
             "existingModules": [
                 {
                     "role": "dataset",
-                    "name": "MNIST",
-                    "description": "The MNIST database of handwritten digits has a training set of 60,000 examples, and a test set of 10,000 examples."
+                    "purpose": "For the training of the model.",
+                    "module": {
+                        "name": "MNIST",
+                        "description": "The MNIST database of handwritten digits has a training set of 60,000 examples, and a test set of 10,000 examples."
+                    }
                 },
                 {
                     "role": "taskType",
-                    "name": "image-classification",
-                    "description": "Image classification is the task of assigning a label or class to an entire image. Images are expected to have only one class for each image. Image classification models take an image as input and return a prediction about which class the image belongs to."
+                    "module": {
+                        "name": "image-classification",
+                        "description": "Image classification is the task of assigning a label or class to an entire image. Images are expected to have only one class for each image. Image classification models take an image as input and return a prediction about which class the image belongs to."
+                    }
                 },
             ],
             "targetRole": "model"
@@ -122,24 +131,71 @@ COML_EXAMPLES: List[CoMLExample] = [
     {
         "goal": "I am interested in predicting house prices. I have already had a dataset and chosen a model. However, I believe I need a data preprocessing step to handle missing values and scale the features properly before training the model.",
         "data": [
-            "[pandas DataFrame containing house features and prices]",
-            "<sklearn.ensemble.GradientBoostingRegressor>"
+            "dataset: dataframe(shape=(545, 13), columns=['price', 'area', ...])",
+            "model: <sklearn.ensemble.GradientBoostingRegressor>"
         ],
         "response": {
             "existingModules": [
                 {
                     "role": "dataset",
-                    "name": "House Price Dataset",
-                    "description": "Dataset containing house features and prices, a simple yet challenging task to predict the housing price based on certain factors like house area, bedrooms, furnished, nearness to mainroad, etc."
+                    "module": {
+                        "name": "House Price Dataset",
+                        "description": "Dataset containing house features and prices, a simple yet challenging task to predict the housing price based on certain factors like house area, bedrooms, furnished, nearness to mainroad, etc."
+                    }
                 },
                 {
                     "role": "model",
-                    "name": "Gradient Boosting Regressor",
-                    "description": "Gradient boosting Regression calculates the difference between the current prediction and the known correct target value. This difference is called residual. After that Gradient boosting Regression trains a weak model that maps features to that residual."
+                    "module": {
+                        "name": "Gradient Boosting Regressor",
+                        "description": "Gradient boosting Regression calculates the difference between the current prediction and the known correct target value. This difference is called residual. After that Gradient boosting Regression trains a weak model that maps features to that residual."
+                    }
                 }
             ],
             "targetRole": "algorithm",
-            "targetSchemaId": "data_preprocessing_schema_id"
+        }
+    },
+    {
+        "goal": "Use a `rpart.preproc` model to fit to this dataset.",
+        "data": [
+            "dataframe(shape=(1000, 5), columns=['x1', 'x2', 'x3', 'x4', 'y'])"
+        ],
+        "response": {
+            "existingModules": [
+                {
+                    "role": "dataset",
+                    "module": {
+                        "name": "Unknown",
+                        "description": "A dataset with 1000 rows and 5 columns."
+                    }
+                },
+                {
+                    "role": "algorithm",
+                    "module": {
+                        "config": {
+                            "api": "rpart.preproc"
+                        }
+                    }
+                }
+            ],
+            "targetRole": "verifiedAlgorithm",
+            "targetSchemaId": "rpart-preproc-4796"
+        }
+    },
+    {
+        "goal": "I have a machine learning pipeline. I want a dataset to verify the pipeline.",
+        "data": [
+            "sklearn.Pipeline(sklearn.preprocessing.StandardScaler(), sklearn.decomposition.PCA(), sklearn.ensemble.RandomForestRegressor())"
+        ],
+        "response": {
+            "existingModules": [
+                {
+                    "role": "solutionSummary",
+                    "module": {
+                        "summary": "A machine learning pipeline that consists of a StandardScaler, PCA, and RandomForestRegressor."
+                    }
+                }
+            ],
+            "targetRole": "dataset"
         }
     },
     {

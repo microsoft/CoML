@@ -14,7 +14,8 @@ def run_subprocess(
     command: List[str],
     working_directory: Optional[Path] = None,
     log_file: Optional[Path] = None,
-    timeout: Optional[float] = None
+    timeout: Optional[float] = None,
+    streaming: bool = True
 ) -> Tuple[int, bytes, bytes]:
     """Run a subprocess, streaming and capturing its output.
     This is from another project.
@@ -62,8 +63,9 @@ def run_subprocess(
                     out = b""
                     pass
                 if out:
-                    sys.stdout.buffer.write(out)
-                    sys.stdout.flush()
+                    if streaming:
+                        sys.stdout.buffer.write(out)
+                        sys.stdout.flush()
                     if file_handle is not None:
                         file_handle.write(out)
                     stdout += out
@@ -78,8 +80,9 @@ def run_subprocess(
                     err = b""
                     pass
                 if err:
-                    sys.stderr.buffer.write(err)
-                    sys.stderr.flush()
+                    if streaming:
+                        sys.stderr.buffer.write(err)
+                        sys.stderr.flush()
                     if file_handle is not None:
                         file_handle.write(err)
                     stderr += err

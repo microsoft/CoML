@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 from colorama import Fore, Style
 from langchain.chat_models.base import BaseChatModel
@@ -68,14 +68,13 @@ class AgentBase:
         self.llm = llm
         self._messages: List[BaseMessage] = []
 
-        self.reset()
-
-    def reset(self):
-        self._record_message(self._system_message())
-
-    def _record_message(self, message: BaseMessage):
-        self._messages.append(message)
-        self._log_message(message)
+    def _record_message(self, message: Union[List[BaseMessage], BaseMessage]):
+        if isinstance(message, list):
+            for m in message:
+                self._record_message(m)
+        else:
+            self._messages.append(message)
+            self._log_message(message)
 
     def _log_message(self, message: BaseMessage):
         if isinstance(message, HumanMessage):
@@ -98,50 +97,57 @@ class AgentBase:
     def __call__(self, *args, **kwargs) -> Any:
         raise NotImplementedError()
 
-    def _system_message(self) -> SystemMessage:
+    def _system_message(self) -> List[BaseMessage]:
         raise NotImplementedError()
 
 
 class CoMLAgent(AgentBase):
 
-    def _format_request(self, intention: CoMLIntention, arguments: List[Any]) -> str:
-        if arguments:
+    def _format_request(self, intention: CoMLIntention, *arguments: Any, **kwargs: Any) -> str:
+        if arguments or kwargs:
             return f"Goal: {intention}\nData:\n" + "\n".join([
-                f"  {i + 1}: {_smart_repr(arg)}" for i, arg in enumerate(arguments)
+                f"  - {_smart_repr(arg)}" for arg in arguments
+            ] + [
+                f"  - {k}: {_smart_repr(v)}" for k, v in kwargs.items()
             ])
         else:
             return f"Goal: {intention}"
 
-    def _system_message(self) -> SystemMessage:
-        return SystemMessage(content=COML_INSTRUCTION)
+    def _system_message(self) -> List[BaseMessage]:
+        messages: List[BaseMessage] = [SystemMessage(content=COML_INSTRUCTION)]
+        for example in COML_EXAMPLES:
+            messages.append(HumanMessage(
+                content=self._format_request(
+                    example["goal"], *example["data"]
+                )
+            ))
+            messages.append(AIMessage(content=json.dumps(example["response"], indent=2)))
+        return messages
 
-    def __call__(self, intention: CoMLIntention, arguments: List[Any]) -> Optional[List[dict]]:
-        if len(self._messages) > 1:
-            self.reset()
+    def __call__(self, intention: CoMLIntention, *args: Any, **kwargs: Any) -> Optional[List[dict]]:
+        self._messages = []
+        self._record_message(self._system_message())
 
-        self._record_message(HumanMessage(content=self._format_request(intention, arguments)))
-        result = self.llm(
-            self._messages,
-            functions=[get_function_description()]
-        )
+        self._record_message(HumanMessage(content=self._format_request(intention, *args, **kwargs)))
+        result = self.llm(self._messages)
         self._record_message(result)
         if result.content == "I don't know.":
             return None
 
-        if ("function_call" in result.additional_kwargs and
-                result.additional_kwargs["function_call"].get("name") == "suggestMachineLearningModule" and
-                result.additional_kwargs["function_call"].get("arguments")):
-            args = json.loads(result.additional_kwargs["function_call"]["arguments"])
-            if "existingModules" in args and "targetRole" in args:
-                schema = args["targetSchemaId"] if "targetSchemaId" in args else None
-                result = suggest_machine_learning_module(args["existingModules"], args["targetRole"], schema)
-                self._log_message(
-                    FunctionMessage(
-                        name="suggestMachineLearningModule",
-                        content=json.dumps(result, indent=2)
-                    )
+        arguments = json.loads(result.content)
+        if "existingModules" in arguments and "targetRole" in arguments:
+            schema = arguments["targetSchemaId"] if "targetSchemaId" in arguments else None
+            result = suggest_machine_learning_module(
+                arguments["existingModules"],
+                arguments["targetRole"],
+                schema)
+            self._log_message(
+                FunctionMessage(
+                    name="suggestMachineLearningModule",
+                    content=json.dumps(result, indent=2)
                 )
-                return result
+            )
+            return result
 
         return None
 
@@ -152,8 +158,10 @@ class CodingAgent(AgentBase):
         super().__init__(llm)
         self.coml_agent = coml_agent
 
-    def _system_message(self) -> SystemMessage:
-        return SystemMessage(content=CODING_INSTRUCTION)
+    def _system_message(self) -> List[BaseMessage]:
+        return [
+            SystemMessage(content=CODING_INSTRUCTION)
+        ]
 
     def _format_request(self, intention: CoMLIntention, arguments: List[Any],
                         coml_response: Optional[List[dict]]) -> str:
@@ -168,6 +176,9 @@ class CodingAgent(AgentBase):
         return request
 
     def __call__(self, intention: CoMLIntention, arguments: List[Any]):
+        if not self._messages:
+            self._record_message(self._system_message())
+
         coml_response = self.coml_agent(intention, arguments)
         self._record_message(
             HumanMessage(content=self._format_request(intention, arguments, coml_response))

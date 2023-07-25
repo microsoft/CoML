@@ -49,10 +49,11 @@ def execute_coml_nodejs(*args: Any) -> Any:
     returncode, stdout, stderr = run_subprocess(
         NODE_EXECUTABLE + serialized_args,
         working_directory=COML_DIRECTORY.resolve(),
-        timeout=120
+        timeout=120,
+        streaming=False
     )
     if returncode != 0:
-        raise RuntimeError(f"Node.js process exited with code {returncode}.")
+        raise RuntimeError(f"Node.js process exited with code {returncode}.\nStdout:\n{stdout}\nStderr:\n{stderr}")
     stdout_decoded = stdout.decode()
     index = stdout_decoded.find(LOG_IDENTIFIER)
     if index == -1:
