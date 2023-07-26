@@ -36,14 +36,20 @@ Some extra coding instructions:
 - Do not use any global variables."""
 
 
+class _NativeString(str):
+    """A string that won't be quoted when converting to a representation."""
+
+
 def _smart_repr(value: Any) -> str:
+    if isinstance(value, _NativeString):
+        return value
     import numpy, pandas
     if isinstance(value, numpy.ndarray):
-        return 'array(shape={})'.format(value.shape)
+        return 'numpy.ndarray(shape={})'.format(value.shape)
     elif isinstance(value, pandas.DataFrame):
-        return 'dataframe(shape={}, columns={})'.format(value.shape, value.columns)
+        return 'pandas.DataFrame(shape={}, columns={})'.format(value.shape, value.columns)
     elif isinstance(value, pandas.Series):
-        return 'series(shape={})'.format(value.shape)
+        return 'pandas.Series(shape={})'.format(value.shape)
     elif isinstance(value, list):
         if len(value) > 30:
             return '[{}, ...]'.format(', '.join(_smart_repr(v) for v in value[:30]))
@@ -121,7 +127,8 @@ class CoMLAgent(AgentBase):
         for example in COML_EXAMPLES:
             messages.append(HumanMessage(
                 content=self._format_request(
-                    example["goal"], *example["data"]
+                    example["goal"],
+                    *[_NativeString(d) for d in example["data"]]
                 )
             ))
             messages.append(AIMessage(content=json.dumps(example["response"], indent=2)))

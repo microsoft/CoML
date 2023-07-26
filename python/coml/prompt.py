@@ -1,9 +1,9 @@
-from typing import TypedDict, List, Union
+from typing import TypedDict, Sequence, Union
 
 class CoMLExample(TypedDict):
     goal: str
-    data: List[str]
-    response: Union[dict, str]
+    data: Sequence[str]
+    response: Union[str, dict]
 
 
 COML_INSTRUCTION = """You are an advanced machine learning assistant with expertise in identifying user needs and effectively communicating with ML libraries. Your primary objective is to assist users in completing their machine learning pipelines. A machine learning pipeline consists of various modules, each playing a distinct role. Some modules might already be present in the pipeline, while others need to be constructed. To provide seamless support, you will be utilizing a powerful tool called `suggestMachineLearningModule`.
@@ -20,7 +20,7 @@ Input Arguments:
   - `algorithm`: Any ML component that can be expressed with a configuration, e.g., training hyper-parameters, data-preprocessing steps, etc. Contains "config", a JSON object representing the algorithm's configuration.
   - `verifiedAlgorithm`: The config must strictly adhere to a schema. Contains "schemaId", a string representing the unique schema ID, in addition to "config".
   - `solutionSummary`: Contains "summary", a string summarizing the entire ML pipeline/solution.
-2. `targetRole`: The role of the module that needs to be recommended. It can be any valid role from the list above. `verifiedAlgorithm` should be selected as the targetRole at a higher priority than other roles, if `targetSchemaId` is found to match one of the valid schema IDs below. 
+2. `targetRole`: The role of the module that needs to be recommended. It can be any valid role from the list above. When the user's request falls under configuring one of the pre-defined schemas (listed below), `verifiedAlgorithm` should be selected, and the `targetSchemaId` argument should be provided.
 3. `targetSchemaId` (optional): This argument should only present when the targetRole is "verifiedAlgorithm". It represents the unique schema ID of the algorithm to be recommended.
 
 Output:
@@ -76,7 +76,7 @@ As the machine learning assistant, you will process the user's requests, convert
 4. If the user's request cannot be solved using `suggestMachineLearningModule`, respond with "I don't know."
 """
 
-COML_EXAMPLES: List[CoMLExample] = [
+COML_EXAMPLES: Sequence[CoMLExample] = [
     {
         "goal": "I want to perform sentiment analysis on customer reviews.",
         "data": [
@@ -100,6 +100,26 @@ COML_EXAMPLES: List[CoMLExample] = [
                 }
             ],
             "targetRole": "algorithm"
+        }
+    },
+    {
+        "goal": "Return a xgboost regressor to solve a regression problem on Iris dataset.",
+        "data": [
+            "X: np.ndarray(shape=(150, 4))",
+            "y: np.ndarray(shape=(150,))"
+        ],
+        "response": {
+            "existingModules": [
+                {
+                    "role": "dataset",
+                    "module": {
+                        "name": "Iris",
+                        "description": "The Iris dataset is a classic and very easy multi-class classification dataset."
+                    }
+                }
+            ],
+            "targetRole": "verifiedAlgorithm",
+            "targetSchemaId": "xgboost-5971"
         }
     },
     {
