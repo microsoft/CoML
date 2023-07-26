@@ -11,7 +11,7 @@ from .context import nearest_user_frame
 from .node import get_function_description, suggest_machine_learning_module
 # from .node_mock import get_function_description, suggest_machine_learning_module
 from .prompt import COML_INSTRUCTION, COML_EXAMPLES
-from .ipython_utils import ipython_available
+from .ipython_utils import ipython_available, create_new_cell
 
 _logger = logging.getLogger(__name__)
 
@@ -186,9 +186,6 @@ class CodingAgent(AgentBase):
             request += "\nML expert recommendations:\n" + json.dumps(coml_response, indent=2)
         return request
 
-    def _append_new_cell(self, code: str) -> None:
-        pass
-
     def _execute_code(self, code: str, *args, **kwargs):
         # Currently the code is executed with:
         # 1. The global variables from the user frame.
@@ -221,7 +218,7 @@ class CodingAgent(AgentBase):
         code = code_match.group(1)
         if self.safe_mode:
             if ipython_available():
-                self._append_new_cell(code)
+                create_new_cell(code)
             else:
                 _logger.warning("Safe mode is enabled but IPython is not available. "
                                 "You might need to manually copy the code and execute.\n%s", code)
