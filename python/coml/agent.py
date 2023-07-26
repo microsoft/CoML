@@ -147,17 +147,21 @@ class CoMLAgent(AgentBase):
         arguments = json.loads(result.content)
         if "existingModules" in arguments and "targetRole" in arguments:
             schema = arguments["targetSchemaId"] if "targetSchemaId" in arguments else None
-            result = suggest_machine_learning_module(
-                arguments["existingModules"],
-                arguments["targetRole"],
-                schema)
-            self._log_message(
-                FunctionMessage(
-                    name="suggestMachineLearningModule",
-                    content=json.dumps(result, indent=2)
+            try:
+                result = suggest_machine_learning_module(
+                    arguments["existingModules"],
+                    arguments["targetRole"],
+                    schema)
+                self._log_message(
+                    FunctionMessage(
+                        name="suggestMachineLearningModule",
+                        content=json.dumps(result, indent=2)
+                    )
                 )
-            )
-            return result
+                return result
+            except Exception as e:
+                _logger.error("Failed to execute `suggest_machine_learning_module`:\n%s", e)
+                return None
 
         return None
 

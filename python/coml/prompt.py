@@ -21,7 +21,7 @@ Input Arguments:
   - `verifiedAlgorithm`: The config must strictly adhere to a schema. Contains "schemaId", a string representing the unique schema ID, in addition to "config".
   - `solutionSummary`: Contains "summary", a string summarizing the entire ML pipeline/solution.
 2. `targetRole`: The role of the module that needs to be recommended. It can be any valid role from the list above. When the user's request falls under configuring one of the pre-defined schemas (listed below), `verifiedAlgorithm` should be selected, and the `targetSchemaId` argument should be provided.
-3. `targetSchemaId` (optional): This argument should only present when the targetRole is "verifiedAlgorithm". It represents the unique schema ID of the algorithm to be recommended.
+3. `targetSchemaId` (optional): This argument should only present when the targetRole is "verifiedAlgorithm". It represents the unique schema ID of the algorithm to be recommended. If `targetSchemaId` presents, it must be selected from the valid schema IDs (listed below).
 
 Output:
 The function call will return a list of modules recommended to the user, based on their specific requirements and the existing modules in their pipeline.

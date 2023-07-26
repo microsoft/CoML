@@ -53,7 +53,7 @@ def execute_coml_nodejs(*args: Any) -> Any:
         streaming=False
     )
     if returncode != 0:
-        raise RuntimeError(f"Node.js process exited with code {returncode}.\nStdout:\n{stdout}\nStderr:\n{stderr}")
+        raise RuntimeError(f"Node.js process exited with code {returncode}.\nStdout:\n{stdout.decode()}\nStderr:\n{stderr.decode()}")
     stdout_decoded = stdout.decode()
     index = stdout_decoded.find(LOG_IDENTIFIER)
     if index == -1:
