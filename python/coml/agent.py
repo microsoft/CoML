@@ -201,18 +201,8 @@ class CodingAgent(AgentBase):
         function = namespace["_coml_solution"]
         return function(*args, **kwargs)
 
-    def __call__(self, intention: CoMLIntention, *args: Any, **kwargs: Any):
-        if not self._messages:
-            self._record_message(self._system_message())
-
-        coml_response = self.coml_agent(intention, *args, **kwargs)
-        self._record_message(
-            HumanMessage(content=self._format_request(intention, list(args), kwargs, coml_response))
-        )
-
-        result = self.llm(self._messages)
-        self._record_message(result)
-        code_match = re.search(r"```.*\n([\S\s]*)```", result.content)
+    def _post_call(self, content: str, *args: Any, **kwargs: Any) -> None:
+        code_match = re.search(r"```.*\n([\S\s]*)```", content)
         if code_match is None:
             raise ValueError("No code found in the response.")
         code = code_match.group(1)
@@ -224,3 +214,26 @@ class CodingAgent(AgentBase):
                                 "You might need to manually copy the code and execute.\n%s", code)
         else:
             return self._execute_code(code, *args, **kwargs)
+
+    def __call__(self, intention: CoMLIntention, *args: Any, **kwargs: Any):
+        if not self._messages:
+            self._record_message(self._system_message())
+
+        coml_response = self.coml_agent(intention, *args, **kwargs)
+        self._record_message(
+            HumanMessage(content=self._format_request(intention, list(args), kwargs, coml_response))
+        )
+
+        result = self.llm(self._messages)
+        self._record_message(result)
+
+        self._post_call(result.content, *args, **kwargs)
+
+    def retry(self, error: str, *args, **kwargs):
+        self._record_message(
+            HumanMessage(content=f"The last code execution failed:\n{error}\nPlease fix the error and retry.")
+        )
+        result = self.llm(self._messages)
+        self._record_message(result)
+
+        self._post_call(result.content, *args, **kwargs)
