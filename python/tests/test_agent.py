@@ -9,7 +9,7 @@ load_dotenv(Path("~/.mlcopilot/.env").expanduser())
 
 def test_agent():
 #     load_dotenv(Path("~/.mlcopilot/.env").expanduser())
-    llm = ChatOpenAI(temperature=0.5)
+    llm = ChatOpenAI(temperature=0.)
     coml_agent = CoMLAgent(llm)
     agent = CodingAgent(llm, coml_agent)
 

@@ -1,14 +1,17 @@
 import json
 import logging
+import re
 from typing import Any, List, Optional, Union, Dict
 
 from colorama import Fore, Style
 from langchain.chat_models.base import BaseChatModel
 from langchain.schema import SystemMessage, HumanMessage, AIMessage, BaseMessage, FunctionMessage
 
+from .context import nearest_user_frame
 from .node import get_function_description, suggest_machine_learning_module
 # from .node_mock import get_function_description, suggest_machine_learning_module
 from .prompt import COML_INSTRUCTION, COML_EXAMPLES
+from .ipython_utils import ipython_available
 
 _logger = logging.getLogger(__name__)
 
@@ -154,9 +157,10 @@ class CoMLAgent(AgentBase):
 
 class CodingAgent(AgentBase):
 
-    def __init__(self, llm: BaseChatModel, coml_agent: CoMLAgent):
+    def __init__(self, llm: BaseChatModel, coml_agent: CoMLAgent, safe_mode: bool = False):
         super().__init__(llm)
         self.coml_agent = coml_agent
+        self.safe_mode = safe_mode
 
     def _system_message(self) -> List[BaseMessage]:
         return [
@@ -182,6 +186,24 @@ class CodingAgent(AgentBase):
             request += "\nML expert recommendations:\n" + json.dumps(coml_response, indent=2)
         return request
 
+    def _append_new_cell(self, code: str) -> None:
+        pass
+
+    def _execute_code(self, code: str, *args, **kwargs):
+        # Currently the code is executed with:
+        # 1. The global variables from the user frame.
+        # 2. Updated with the local variables.
+        # 3. The namespace
+        user_frame = nearest_user_frame()
+        namespace = user_frame.f_globals.copy()
+        local_copy = user_frame.f_locals.copy()
+        namespace.update(local_copy)
+        exec(code, namespace)
+        if "_coml_solution" not in namespace:
+            raise ValueError("No function named `_coml_solution` found in the code.")
+        function = namespace["_coml_solution"]
+        return function(*args, **kwargs)
+
     def __call__(self, intention: CoMLIntention, *args: Any, **kwargs: Any):
         if not self._messages:
             self._record_message(self._system_message())
@@ -193,3 +215,15 @@ class CodingAgent(AgentBase):
 
         result = self.llm(self._messages)
         self._record_message(result)
+        code_match = re.search(r"```.*\n([\S\s]*)```", result.content)
+        if code_match is None:
+            raise ValueError("No code found in the response.")
+        code = code_match.group(1)
+        if self.safe_mode:
+            if ipython_available():
+                self._append_new_cell(code)
+            else:
+                _logger.warning("Safe mode is enabled but IPython is not available. "
+                                "You might need to manually copy the code and execute.\n%s", code)
+        else:
+            return self._execute_code(code, *args, **kwargs)
