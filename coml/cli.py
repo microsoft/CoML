@@ -1,5 +1,6 @@
-import click
 from typing import Optional
+
+import click
 
 from .orm import database_proxy
 
@@ -25,11 +26,13 @@ def main(
             if ctx.params["space"] is None or ctx.params["task"] is None:
                 print("Please specify space ID and a task description.")
                 return
-            from .suggest import suggest, print_suggested_configs
             from .space import import_space
+            from .suggest import print_suggested_configs, suggest
+
             results = suggest(import_space(ctx.params["space"]), ctx.params["task"])
             print_suggested_configs(*results)
             database_proxy.close()
+
 
 @main.command()
 @click.argument("space", nargs=1)

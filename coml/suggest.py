@@ -21,10 +21,7 @@ from .utils import (
 )
 
 
-def print_suggested_configs(
-    configurations: Any,
-    knowledge: str | None
-) -> None:
+def print_suggested_configs(configurations: Any, knowledge: str | None) -> None:
     if knowledge:
         print(f"\n* Rationale: ")
         print(knowledge)

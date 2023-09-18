@@ -87,9 +87,7 @@ elif COML_DB_BACKEND == "postgres":
         password=COML_DB_PASSWORD,
     )
 else:
-    raise NotImplementedError(
-        f"COML_DB_BACKEND {COML_DB_BACKEND} not supported."
-    )
+    raise NotImplementedError(f"COML_DB_BACKEND {COML_DB_BACKEND} not supported.")
 
 
 def init_db():
@@ -128,9 +126,7 @@ class Space(BaseModel):
 
 class Task(BaseModel):
     task_id: str = TextField(primary_key=True)
-    embedding = (
-        ArrayField() if COML_DB_BACKEND == "sqlite" else VectorField(EMBED_DIM)
-    )
+    embedding = ArrayField() if COML_DB_BACKEND == "sqlite" else VectorField(EMBED_DIM)
     desc = TextField()
     row_desc = TextField()
 
