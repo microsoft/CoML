@@ -10,9 +10,9 @@ import pandas as pd
 from langchain.cache import InMemoryCache
 from peewee import ModelSelect, fn
 
-from mlcopilot.constants import *
-from mlcopilot.orm import Knowledge, Solution, Space, Task, database_proxy
-from mlcopilot.utils import format_config, get_llm
+from .constants import *
+from .orm import Knowledge, Solution, Space, Task, database_proxy
+from .utils import format_config, get_llm
 
 SAVE_OPTIONS = orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_SERIALIZE_DATACLASS
 

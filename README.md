@@ -1,45 +1,46 @@
-# MLCopilot
+# CoML
 
-MLCopilot is a tool to help you find the best models/hyperparametes for your task. It uses Large Language Models(LLMs) to suggest models and hyperparameters based on your task description and previous experiments.
+CoML (formerly MLCopilot) assists users in generating practical ML solutions based on historical experiences, streamlining complex ML challenges. Users input specific ML tasks they want to solve, such as classifying emails as spam or not. The system provides suggested solutions, including recommended ML models, data processing methods, and explanations that are easy for humans to understand. [Paper](https://arxiv.org/abs/2304.14979)
 
 ![](assets/demo.gif)
 
-## Quickstart
+(TODO: The demo needs an update.)
 
-1. [Get an OpenAI API Key](#get-an-openai-api-key)
-2. [Install requirements](#install-requirements)
-3. [Run](#run)
+### Installation
 
-### Get an OpenAI API Key
+We currently do not support installation from pypi. Please follow the steps below to install CoML:
 
-1. Create an account [here](https://beta.openai.com/signup)
-2. Create an API key [here](https://beta.openai.com/account/api-keys)
+1. Clone this repo: `git clone REPO_URL; cd coml`
+2. Put assets/coml.db in your home directory: `cp assets/coml.db ~/.coml/coml.db`
+3. Copy `coml/.env.template` to `~/.coml/.env` and put your API keys in the file.
+3. Install the package via `pip install -e .`.
 
-### Install requirements
+### Command line utility
 
-0. Clone this repo: `git clone REPO_URL; cd mlcopilot`
-1. Put assets/mlcopilot.db in your home directory: `cp assets/mlcopilot.db ~/.mlcopilot/mlcopilot.db`
-2. Install Python 3.8 or higher
-3. Install: `pip install .`. If you want to develop, use `pip install -e .[dev]` instead.
+CoML can suggest a ML configuration within a specific task, for a specific task. Use the following command line:
 
-### Run
+```
+coml --space <space> --task <task>
+```
 
-Command line: `mlcopilot`
+If you feel uncertain about what to put into `<space>` or `<task>`, see the demo above, or try the interactive usage below:
 
+```
+coml --interactive
+```
 
 ### API Usage
 
 ```python
-from mlcopilot.suggest import suggest
+from coml.suggest import suggest
 
 space = import_space("YOUR_SPACE_ID")
 task_desc = "YOUR_TASK_DESCRIPTION_FOR_NEW_TASK"
 suggest_configs, knowledge = suggest(space, task_desc)
 ```
 
-
-
 ## Citation
+
 If you find this work useful in your method, you can cite the paper as below:
 
     @article{zhang2023mlcopilot,

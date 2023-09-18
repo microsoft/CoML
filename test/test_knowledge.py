@@ -3,15 +3,15 @@ import re
 import pandas as pd
 import pytest
 
-from mlcopilot.knowledge import (
+from coml.knowledge import (
     gen_knowledge_candidate,
     post_validation,
     split_knowledge,
     suggest_with_knowledge,
 )
-from mlcopilot.space import create_space, delete_space
-from mlcopilot.surrogate_utils import process_history_df, train_surrogate
-from mlcopilot.utils import set_llms
+from coml.space import create_space, delete_space
+from coml.surrogate_utils import process_history_df, train_surrogate
+from coml.utils import set_llms
 
 from .llm import MockEmbeddingModel, MockKnowledgeLLM, MockSuggestLLM
 

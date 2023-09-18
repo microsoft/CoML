@@ -6,12 +6,12 @@ import orjson
 from langchain.prompts import FewShotPromptTemplate, PromptTemplate
 from langchain.prompts.example_selector import LengthBasedExampleSelector
 
-from mlcopilot.constants import *
-from mlcopilot.constants import TOKEN_COMPLETION_LIMIT, TOKEN_LIMIT
-from mlcopilot.experience import gen_experience
-from mlcopilot.orm import Knowledge, Solution, Space, Task, database_proxy
-from mlcopilot.surrogate_utils import evaluate_configs
-from mlcopilot.utils import get_llm, get_token_count_func, parse_configs
+from .constants import *
+from .constants import TOKEN_COMPLETION_LIMIT, TOKEN_LIMIT
+from .experience import gen_experience
+from .orm import Knowledge, Solution, Space, Task, database_proxy
+from .surrogate_utils import evaluate_configs
+from .utils import get_llm, get_token_count_func, parse_configs
 
 prefix_sep = "__DUMM_SEP__"
 

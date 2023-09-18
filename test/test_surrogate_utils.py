@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from mlcopilot.surrogate_utils import (
+from coml.surrogate_utils import (
     evaluate_configs,
     process_history_df,
     train_surrogate,

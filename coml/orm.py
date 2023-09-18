@@ -24,8 +24,8 @@ try:
 except ImportError:
     from_db = to_db = None
 
-from mlcopilot.constants import *
-from mlcopilot.utils import get_llm
+from .constants import *
+from .utils import get_llm
 
 
 class ArrayField(BlobField):
@@ -72,34 +72,34 @@ class VectorField(Field):
 
 database_proxy = DatabaseProxy()
 
-if MLCOPILOT_DB_BACKEND == "sqlite":
+if COML_DB_BACKEND == "sqlite":
     from peewee import SqliteDatabase
 
-    init_db_func = lambda: SqliteDatabase(MLCOPILOT_DB_PATH)
-elif MLCOPILOT_DB_BACKEND == "postgres":
+    init_db_func = lambda: SqliteDatabase(COML_DB_PATH)
+elif COML_DB_BACKEND == "postgres":
     from peewee import PostgresqlDatabase
 
     init_db_func = lambda: PostgresqlDatabase(
-        MLCOPILOT_DB_NAME,
-        host=MLCOPILOT_DB_HOST,
-        port=MLCOPILOT_DB_PORT,
-        user=MLCOPILOT_DB_USER,
-        password=MLCOPILOT_DB_PASSWORD,
+        COML_DB_NAME,
+        host=COML_DB_HOST,
+        port=COML_DB_PORT,
+        user=COML_DB_USER,
+        password=COML_DB_PASSWORD,
     )
 else:
     raise NotImplementedError(
-        f"MLCOPILOT_DB_BACKEND {MLCOPILOT_DB_BACKEND} not supported."
+        f"COML_DB_BACKEND {COML_DB_BACKEND} not supported."
     )
 
 
 def init_db():
     database_proxy.initialize(init_db_func())
     conn = database_proxy.connection()
-    if MLCOPILOT_DB_BACKEND == "postgres":
+    if COML_DB_BACKEND == "postgres":
         register_vector(conn)
     database_proxy.create_tables([Space, Task, Solution, Knowledge])
 
-    if MLCOPILOT_DB_BACKEND == "sqlite":
+    if COML_DB_BACKEND == "sqlite":
         _cache = {}
 
         @database_proxy.func()
@@ -129,7 +129,7 @@ class Space(BaseModel):
 class Task(BaseModel):
     task_id: str = TextField(primary_key=True)
     embedding = (
-        ArrayField() if MLCOPILOT_DB_BACKEND == "sqlite" else VectorField(EMBED_DIM)
+        ArrayField() if COML_DB_BACKEND == "sqlite" else VectorField(EMBED_DIM)
     )
     desc = TextField()
     row_desc = TextField()

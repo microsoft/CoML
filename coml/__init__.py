@@ -4,7 +4,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-dotenv_dir = Path.home() / ".mlcopilot"
+dotenv_dir = Path.home() / ".coml"
 dotenv_path = (dotenv_dir / ".env").resolve()
 
 if not os.path.exists(dotenv_dir):
