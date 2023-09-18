@@ -6,12 +6,12 @@ from langchain import FewShotPromptTemplate, PromptTemplate
 from langchain.prompts.example_selector import LengthBasedExampleSelector
 from peewee import fn
 
-from mlcopilot.constants import *
-from mlcopilot.experience import gen_experience
-from mlcopilot.knowledge import get_knowledge
-from mlcopilot.orm import Knowledge, Solution, Space, Task, database_proxy
-from mlcopilot.space import import_space, print_space
-from mlcopilot.utils import (
+from .constants import *
+from .experience import gen_experience
+from .knowledge import get_knowledge
+from .orm import Knowledge, Solution, Space, Task, database_proxy
+from .space import import_space, print_space
+from .utils import (
     clean_input,
     escape,
     get_llm,
@@ -19,6 +19,18 @@ from mlcopilot.utils import (
     parse_configs,
     set_llms,
 )
+
+
+def print_suggested_configs(configurations: Any, knowledge: str | None) -> None:
+    if knowledge:
+        print(f"\n* Rationale: ")
+        print(knowledge)
+    print(f"\n* Recommended configurations: ")
+    if isinstance(configurations, str):
+        print(configurations)
+    else:
+        for i, suggest_config in enumerate(configurations):
+            print(f"Suggested configuration {i+1}. {suggest_config}")
 
 
 def suggest_interactive() -> None:
@@ -43,15 +55,7 @@ def suggest_interactive() -> None:
         )
         task_desc = clean_input("Your description for new task: ").strip(".") + "."
         suggest_configs, knowledge = suggest(space, task_desc)
-        if knowledge:
-            print(f"\n* Rationale: ")
-            print(knowledge)
-        print(f"\n* Recommended configurations: ")
-        if isinstance(suggest_configs, str):
-            print(suggest_configs)
-        else:
-            for i, suggest_config in enumerate(suggest_configs):
-                print(f"Suggested configuration {i+1}. {suggest_config}")
+        print_suggested_configs(suggest_configs, knowledge)
         # press any key to continue, press 'q' to quit
         if clean_input('Press any key to continue, press "q" to quit: ') == "q":
             break

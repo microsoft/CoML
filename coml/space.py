@@ -4,9 +4,9 @@ from typing import List, Optional
 
 import pandas as pd
 
-from mlcopilot.experience import ingest_experience
-from mlcopilot.knowledge import get_knowledge
-from mlcopilot.orm import Knowledge, Solution, Space, Task, database_proxy
+from .experience import ingest_experience
+from .knowledge import get_knowledge
+from .orm import Knowledge, Solution, Space, Task, database_proxy
 
 
 def gen_space_description(
@@ -64,9 +64,9 @@ def create_space(
     space_id: str
         The ID of the space to identify the space.
     history: str
-        The path to the history of configurations. A csv file, format see `mlcopilot::experience::ingest_experience`.
+        The path to the history of configurations. A csv file, format see `coml.experience.ingest_experience`.
     task_desc: str
-        The JSON path to the task description. A json file, format see `mlcopilot::experience::ingest_experience`.
+        The JSON path to the task description. A json file, format see `coml.experience.ingest_experience`.
     space_desc: str
         The text path to the space description. Optional.
     no_knowledge: bool
@@ -93,8 +93,8 @@ def create_space(
     space = ingest_experience(history_df, task_desc, space_desc, space_id)
 
     if not no_knowledge and get_knowledge(space) == "":
-        from mlcopilot.knowledge import post_validation
-        from mlcopilot.surrogate_utils import process_history_df, train_surrogate
+        from .knowledge import post_validation
+        from .surrogate_utils import process_history_df, train_surrogate
 
         history_df_processed, config_names = process_history_df(history_df)
         surrogate_fn = train_surrogate(history_df_processed)

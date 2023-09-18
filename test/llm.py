@@ -5,7 +5,7 @@ from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.embeddings import FakeEmbeddings
 from langchain.llms.fake import FakeListLLM
 
-from mlcopilot.constants import EMBED_DIM
+from coml.constants import EMBED_DIM
 
 
 class MockKnowledgeLLM(FakeListLLM):

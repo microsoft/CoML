@@ -2,11 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from mlcopilot.surrogate_utils import (
-    evaluate_configs,
-    process_history_df,
-    train_surrogate,
-)
+from coml.surrogate_utils import evaluate_configs, process_history_df, train_surrogate
 
 
 def test_process_history_df():

@@ -2,18 +2,18 @@ import os
 from pathlib import Path
 
 __all__ = [
-    "MLCOPILOT_DB_PATH",
+    "COML_DB_PATH",
     "TOP_K",
     "EMBED_DIM",
     "bin_map",
     "inverse_bin_map",
     "q_num",
-    "MLCOPILOT_DB_BACKEND",
-    "MLCOPILOT_DB_NAME",
-    "MLCOPILOT_DB_HOST",
-    "MLCOPILOT_DB_PORT",
-    "MLCOPILOT_DB_USER",
-    "MLCOPILOT_DB_PASSWORD",
+    "COML_DB_BACKEND",
+    "COML_DB_NAME",
+    "COML_DB_HOST",
+    "COML_DB_PORT",
+    "COML_DB_USER",
+    "COML_DB_PASSWORD",
     "PROMPT_FORMATS",
     "DEFAULT_PROMPT_PREFIX",
     "DEFAULT_PROMPT_SUFFIX",
@@ -28,17 +28,17 @@ TOKEN_LIMIT = 4096
 TOKEN_COMPLETION_LIMIT = 800
 RELAX_TOKEN = 500  # RELAX_TOKEN is the number of tokens to void token limit
 
-MLCOPILOT_DB_BACKEND = os.environ.get("MLCOPILOT_DB_BACKEND", "sqlite")
+COML_DB_BACKEND = os.environ.get("COML_DB_BACKEND", "sqlite")
 
-MLCOPILOT_DB_PATH = Path(
-    os.environ.get("MLCOPILOT_DB_PATH", Path.home() / ".mlcopilot" / "mlcopilot.db")
+COML_DB_PATH = Path(
+    os.environ.get("COML_DB_PATH", Path.home() / ".coml" / "coml.db")
 ).expanduser()
 
-MLCOPILOT_DB_NAME = os.environ.get("MLCOPILOT_DB_NAME", "mlcopilot")
-MLCOPILOT_DB_HOST = os.environ.get("MLCOPILOT_DB_HOST", "localhost")
-MLCOPILOT_DB_PORT = os.environ.get("MLCOPILOT_DB_PORT", 5432)
-MLCOPILOT_DB_USER = os.environ.get("MLCOPILOT_DB_USER", "postgres")
-MLCOPILOT_DB_PASSWORD = os.environ.get("MLCOPILOT_DB_PASSWORD", "")
+COML_DB_NAME = os.environ.get("COML_DB_NAME", "coml")
+COML_DB_HOST = os.environ.get("COML_DB_HOST", "localhost")
+COML_DB_PORT = os.environ.get("COML_DB_PORT", 5432)
+COML_DB_USER = os.environ.get("COML_DB_USER", "postgres")
+COML_DB_PASSWORD = os.environ.get("COML_DB_PASSWORD", "")
 
 bin_map = {
     0.1: "very small",

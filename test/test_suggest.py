@@ -3,12 +3,12 @@ import re
 import orjson
 import pytest
 
-from mlcopilot.constants import TOP_K, inverse_bin_map
-from mlcopilot.knowledge import split_knowledge
-from mlcopilot.orm import Knowledge
-from mlcopilot.space import create_space, delete_space
-from mlcopilot.suggest import suggest
-from mlcopilot.utils import parse_configs, set_llms
+from coml.constants import TOP_K, inverse_bin_map
+from coml.knowledge import split_knowledge
+from coml.orm import Knowledge
+from coml.space import create_space, delete_space
+from coml.suggest import suggest
+from coml.utils import parse_configs, set_llms
 
 from .llm import MockEmbeddingModel, MockKnowledgeLLM, MockSuggestLLM
 

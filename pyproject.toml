@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "mlcopilot"
+name = "coml"
 version = "0.0.1"
 dependencies = [
   "click",
@@ -37,16 +37,16 @@ classifiers = [
 
 
 [project.urls]
-Documentation = "https://github.com/microsoft/mlcopilot#readme"
-Issues = "https://github.com/microsoft/mlcopilot/issues"
-Source = "https://github.com/microsoft/mlcopilot"
+Documentation = "https://github.com/microsoft/coml#readme"
+Issues = "https://github.com/microsoft/coml/issues"
+Source = "https://github.com/microsoft/coml"
 
 [project.scripts]
-mlcopilot = "mlcopilot.cli:main"
+coml = "coml.cli:main"
 
 [tool.hatch.build]
 include = [
-  "/mlcopilot"
+  "/coml"
 ]
 
 [tool.black]

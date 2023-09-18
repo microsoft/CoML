@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from mlcopilot.space import (
+from coml.space import (
     create_space,
     database_proxy,
     delete_space,
@@ -10,7 +10,7 @@ from mlcopilot.space import (
     list_available_spaces,
     print_space,
 )
-from mlcopilot.utils import set_llms
+from coml.utils import set_llms
 
 from .llm import MockEmbeddingModel, MockKnowledgeLLM, MockSuggestLLM
 

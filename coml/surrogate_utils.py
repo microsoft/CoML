@@ -17,7 +17,7 @@ def process_history_df(history_df: pd.DataFrame):
     Parameters
     ----------
     history_df: pd.DataFrame
-        The history dataframe, format see `mlcopilot::experience::ingest_experience`.
+        The history dataframe, format see `coml.experience.ingest_experience`.
 
     Returns
     -------

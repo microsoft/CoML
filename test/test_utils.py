@@ -1,6 +1,6 @@
 import pytest
 
-from mlcopilot.utils import format_config, parse_configs
+from coml.utils import format_config, parse_configs
 
 
 def test_parser_configs():

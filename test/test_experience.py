@@ -3,8 +3,8 @@ import pandas as pd
 import pytest
 from peewee import JOIN, fn
 
-from mlcopilot.constants import MLCOPILOT_DB_BACKEND, TOP_K
-from mlcopilot.experience import (
+from coml.constants import COML_DB_BACKEND, TOP_K
+from coml.experience import (
     _ingest_solution,
     _ingest_space,
     _ingest_task,
@@ -14,9 +14,9 @@ from mlcopilot.experience import (
     get_quantile_stat,
     ingest_experience,
 )
-from mlcopilot.orm import Solution, Task
-from mlcopilot.space import create_tables, drop_tables
-from mlcopilot.utils import set_llms
+from coml.orm import Solution, Task
+from coml.space import create_tables, drop_tables
+from coml.utils import set_llms
 
 from .llm import MockEmbeddingModel, MockKnowledgeLLM
 
