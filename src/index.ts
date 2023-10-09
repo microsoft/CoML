@@ -109,8 +109,8 @@ function getLastCell(notebook: Notebook, currentCellIndex: number): any {
 }
 
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'chatdata:plugin',
-  description: 'JupyterLab extension for ChatData.',
+  id: 'coml:plugin',
+  description: 'JupyterLab extension for CoML.',
   autoStart: true,
   optional: [INotebookTracker],
   activate: (
@@ -194,9 +194,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
     ).onInputRequest;
     (OutputArea.prototype as any).onInputRequest = hackedOnInputRequest;
 
-    app.commands.addCommand('chatdata:insert_cell_below', {
-      label: 'Execute chatdata:insert_cell_below Command',
-      caption: 'Execute chatdata:insert_cell_below Command',
+    app.commands.addCommand('coml:insert_cell_below', {
+      label: 'Execute coml:insert_cell_below Command',
+      caption: 'Execute coml:insert_cell_below Command',
       execute: (args: any) => {
         const notebook = getNotebook(app, notebookTracker);
         if (!notebook) {
@@ -212,9 +212,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
     });
 
-    app.commands.addCommand('chatdata:insert_and_execute_cell_below', {
-      label: 'Execute chatdata:insert_and_execute_cell_below Command',
-      caption: 'Execute chatdata:insert_and_execute_cell_below Command',
+    app.commands.addCommand('coml:insert_and_execute_cell_below', {
+      label: 'Execute coml:insert_and_execute_cell_below Command',
+      caption: 'Execute coml:insert_and_execute_cell_below Command',
       execute: (args: any) => {
         const notebook = getNotebook(app, notebookTracker);
         const sessionContext = getNotebookContext(app, notebookTracker);

@@ -24,7 +24,7 @@ def insert_cell_below(code: str, metadata: Any = None) -> None:
             # e.g., invoked from a widget callback. It will run in the log console.
             from ipylab import JupyterFrontEnd
             app = JupyterFrontEnd()
-            app.commands.execute("chatdata:insert_cell_below", {"code": code, "metadata": metadata})
+            app.commands.execute("coml:insert_cell_below", {"code": code, "metadata": metadata})
     else:
         encoded_code = base64.b64encode(code.encode()).decode()
         encoded_metadata = base64.b64encode(json.dumps(metadata).encode()).decode()
@@ -45,7 +45,7 @@ def run_code_in_next_cell(python_code: str, metadata: Any = None) -> None:
             # e.g., invoked from a widget callback
             from ipylab import JupyterFrontEnd
             app = JupyterFrontEnd()
-            app.commands.execute("chatdata:insert_and_execute_cell_below", {"code": python_code, "metadata": metadata})
+            app.commands.execute("coml:insert_and_execute_cell_below", {"code": python_code, "metadata": metadata})
     else:
         encoded_code = base64.b64encode(python_code.encode()).decode()
         encoded_metadata = base64.b64encode(json.dumps(metadata).encode()).decode()

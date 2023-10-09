@@ -1,7 +1,7 @@
 {
-  "name": "chatdata",
+  "name": "coml",
   "version": "0.1.0",
-  "description": "JupyterLab extension for ChatData.",
+  "description": "JupyterLab extension for CoML.",
   "keywords": [
     "jupyter",
     "jupyterlab",
@@ -81,7 +81,7 @@
   },
   "jupyterlab": {
     "extension": true,
-    "outputDir": "chatdata/labextension"
+    "outputDir": "coml/labextension"
   },
   "eslintIgnore": [
     "node_modules",

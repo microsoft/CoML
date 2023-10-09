@@ -15,6 +15,34 @@ We currently do not support installation from pypi. Please follow the steps belo
 3. Copy `coml/.env.template` to `~/.coml/.env` and put your API keys in the file.
 3. Install the package via `pip install -e .`.
 
+## Development installation (draft)
+
+These are the instructions on how your extension can be installed for development:
+
+You will need NodeJS to build the extension package.
+
+```
+# Install package in development mode
+pip install -e .
+# Link your development version of the extension with JupyterLab
+jupyter labextension develop . --overwrite
+# Rebuild extension Typescript source after making changes
+jlpm run build
+```
+
+### Development uninstall
+
+```bash
+# Server extension must be manually disabled in develop mode
+jupyter server extension disable coml
+pip uninstall coml
+```
+
+In development mode, you will also need to remove the symlink created by `jupyter labextension develop`
+command. To find its location, you can run `jupyter labextension list` to figure out where the `labextensions`
+folder is located. Then you can remove the symlink named `coml` within that folder.
+
+
 ### Command line utility
 
 CoML can suggest a ML configuration within a specific task, for a specific task. Use the following command line:
