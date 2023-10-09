@@ -3,14 +3,14 @@ import re
 import orjson
 import pytest
 
-from coml.constants import TOP_K, inverse_bin_map
-from coml.knowledge import split_knowledge
-from coml.orm import Knowledge
-from coml.space import create_space, delete_space
-from coml.suggest import suggest
-from coml.utils import parse_configs, set_llms
+from coml.configaide.constants import TOP_K, inverse_bin_map
+from coml.configaide.knowledge import split_knowledge
+from coml.configaide.orm import Knowledge
+from coml.configaide.space import create_space, delete_space
+from coml.configaide.suggest import suggest
+from coml.configaide.utils import parse_configs, set_llms
 
-from .llm import MockEmbeddingModel, MockKnowledgeLLM, MockSuggestLLM
+from .helper import MockEmbeddingModel, MockKnowledgeLLM, MockSuggestLLM
 
 
 def _create_space():

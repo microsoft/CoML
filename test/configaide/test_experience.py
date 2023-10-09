@@ -3,8 +3,8 @@ import pandas as pd
 import pytest
 from peewee import JOIN, fn
 
-from coml.constants import COML_DB_BACKEND, TOP_K
-from coml.experience import (
+from coml.configaide.constants import COML_DB_BACKEND, TOP_K
+from coml.configaide.experience import (
     _ingest_solution,
     _ingest_space,
     _ingest_task,
@@ -14,11 +14,11 @@ from coml.experience import (
     get_quantile_stat,
     ingest_experience,
 )
-from coml.orm import Solution, Task
-from coml.space import create_tables, drop_tables
-from coml.utils import set_llms
+from coml.configaide.orm import Solution, Task
+from coml.configaide.space import create_tables, drop_tables
+from coml.configaide.utils import set_llms
 
-from .llm import MockEmbeddingModel, MockKnowledgeLLM
+from .helper import MockEmbeddingModel, MockKnowledgeLLM
 
 history_df = pd.read_csv("assets/example_history.csv")
 
