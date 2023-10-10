@@ -43,6 +43,12 @@ command. To find its location, you can run `jupyter labextension list` to figure
 folder is located. Then you can remove the symlink named `coml` within that folder.
 
 
+### Development build
+
+```bash
+hatch build
+```
+
 ### Command line utility
 
 CoML can suggest a ML configuration within a specific task, for a specific task. Use the following command line:

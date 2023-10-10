@@ -3,8 +3,8 @@ import pandas as pd
 import pytest
 from peewee import JOIN, fn
 
-from coml.configaide.constants import COML_DB_BACKEND, TOP_K
-from coml.configaide.experience import (
+from coml.configagent.constants import COML_DB_BACKEND, TOP_K
+from coml.configagent.experience import (
     _ingest_solution,
     _ingest_space,
     _ingest_task,
@@ -14,9 +14,9 @@ from coml.configaide.experience import (
     get_quantile_stat,
     ingest_experience,
 )
-from coml.configaide.orm import Solution, Task
-from coml.configaide.space import create_tables, drop_tables
-from coml.configaide.utils import set_llms
+from coml.configagent.orm import Solution, Task
+from coml.configagent.space import create_tables, drop_tables
+from coml.configagent.utils import set_llms
 
 from .helper import MockEmbeddingModel, MockKnowledgeLLM
 

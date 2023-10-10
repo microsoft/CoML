@@ -3,15 +3,15 @@ import re
 import pandas as pd
 import pytest
 
-from coml.configaide.knowledge import (
+from coml.configagent.knowledge import (
     gen_knowledge_candidate,
     post_validation,
     split_knowledge,
     suggest_with_knowledge,
 )
-from coml.configaide.space import create_space, delete_space
-from coml.configaide.surrogate_utils import process_history_df, train_surrogate
-from coml.configaide.utils import set_llms
+from coml.configagent.space import create_space, delete_space
+from coml.configagent.surrogate_utils import process_history_df, train_surrogate
+from coml.configagent.utils import set_llms
 
 from .helper import MockEmbeddingModel, MockKnowledgeLLM, MockSuggestLLM
 

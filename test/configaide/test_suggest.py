@@ -3,12 +3,12 @@ import re
 import orjson
 import pytest
 
-from coml.configaide.constants import TOP_K, inverse_bin_map
-from coml.configaide.knowledge import split_knowledge
-from coml.configaide.orm import Knowledge
-from coml.configaide.space import create_space, delete_space
-from coml.configaide.suggest import suggest
-from coml.configaide.utils import parse_configs, set_llms
+from coml.configagent.constants import TOP_K, inverse_bin_map
+from coml.configagent.knowledge import split_knowledge
+from coml.configagent.orm import Knowledge
+from coml.configagent.space import create_space, delete_space
+from coml.configagent.suggest import suggest
+from coml.configagent.utils import parse_configs, set_llms
 
 from .helper import MockEmbeddingModel, MockKnowledgeLLM, MockSuggestLLM
 

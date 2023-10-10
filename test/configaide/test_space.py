@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from coml.configaide.space import (
+from coml.configagent.space import (
     create_space,
     database_proxy,
     delete_space,
@@ -10,7 +10,7 @@ from coml.configaide.space import (
     list_available_spaces,
     print_space,
 )
-from coml.configaide.utils import set_llms
+from coml.configagent.utils import set_llms
 
 from .helper import MockEmbeddingModel, MockKnowledgeLLM, MockSuggestLLM
 
