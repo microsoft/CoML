@@ -25,7 +25,7 @@ dependencies = [
 description = 'Assistant for data scientists and machine learning developers.'
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.8"
+requires-python = ">= 3.8"
 authors = [
   { name = "CoML team", email = "coml@microsoft.com" },
 ]

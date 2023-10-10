@@ -24,14 +24,14 @@ def insert_cell_below(code: str, metadata: Any = None) -> None:
             # e.g., invoked from a widget callback. It will run in the log console.
             from ipylab import JupyterFrontEnd
             app = JupyterFrontEnd()
-            app.commands.execute("coml:insert_cell_below", {"code": code, "metadata": metadata})
+            app.commands.execute("coml:insert_cell_below", {"code": code, "metadata": metadata})  # type: ignore
     else:
         encoded_code = base64.b64encode(code.encode()).decode()
         encoded_metadata = base64.b64encode(json.dumps(metadata).encode()).decode()
         display(Javascript(f"""
             const cell = IPython.notebook.insert_cell_below('code');
             cell.set_text(atob("{encoded_code}"));
-            cell.metadata.chatdata = JSON.parse(atob("{encoded_metadata}"));
+            cell.metadata.coml = JSON.parse(atob("{encoded_metadata}"));
             cell.focus_cell();
             cell.focus_editor();
         """))
@@ -45,14 +45,14 @@ def run_code_in_next_cell(python_code: str, metadata: Any = None) -> None:
             # e.g., invoked from a widget callback
             from ipylab import JupyterFrontEnd
             app = JupyterFrontEnd()
-            app.commands.execute("coml:insert_and_execute_cell_below", {"code": python_code, "metadata": metadata})
+            app.commands.execute("coml:insert_and_execute_cell_below", {"code": python_code, "metadata": metadata})  # type: ignore
     else:
         encoded_code = base64.b64encode(python_code.encode()).decode()
         encoded_metadata = base64.b64encode(json.dumps(metadata).encode()).decode()
         display(Javascript(f"""
             const cell = IPython.notebook.insert_cell_below('code');
             cell.set_text(atob("{encoded_code}"));
-            cell.metadata.chatdata = JSON.parse(atob("{encoded_metadata}"));
+            cell.metadata.coml = JSON.parse(atob("{encoded_metadata}"));
             cell.focus_cell();
             cell.execute();
         """))
@@ -81,7 +81,7 @@ def get_last_cell() -> dict[str, Any] | None:
 
     {
         "metadata":{
-            "chatdata":{
+            "coml":{
                 "variables":{},
                 "codes":[],
                 "request":"Import the dataset from this [address](https://raw.githubusercontent.com/datasets/investor-flow-of-funds-us/master/data/weekly.csv).\nAssign it to a variable called flow",

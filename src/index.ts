@@ -86,7 +86,7 @@ function insertCellBelow(
   notebook.model?.sharedModel.insertCell(activeCellIndex + 1, {
     cell_type: 'code',
     metadata: {
-      chatdata: chatMetadata
+      coml: chatMetadata
     },
     source: code
   });

@@ -1,5 +1,23 @@
 # CoML
 
+CoML (formerly MLCopilot) is an interactive coding assistant for data scientists and machine learning developers, empowered on large language models.
+
+Highlight features:
+
+* Out-of-the-box interactive natural language programming interface for data mining and machine learning tasks.
+* Integration with Jupyter lab and Jupyter notebook.
+* Built-in large knowledge base of machine learning, enhancing the ability of solving complex tasks.
+
+## Installation
+
+```bash
+pip install coml
+```
+
+## Highlights
+
+
+
 CoML (formerly MLCopilot) assists users in generating practical ML solutions based on historical experiences, streamlining complex ML challenges. Users input specific ML tasks they want to solve, such as classifying emails as spam or not. The system provides suggested solutions, including recommended ML models, data processing methods, and explanations that are easy for humans to understand. [Paper](https://arxiv.org/abs/2304.14979)
 
 ![](assets/demo.gif)

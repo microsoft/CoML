@@ -55,7 +55,7 @@ def parse_code(response: str) -> str:
         code = response
     return code
 
-class ChatDataAgent:
+class CoMLAgent:
     def __init__(self, llm: BaseChatModel):
         self.llm = llm
 
