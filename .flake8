@@ -10,3 +10,4 @@ exclude =
     .venv/*,
     reports/*,
     dist/*,
+    node_modules/*,

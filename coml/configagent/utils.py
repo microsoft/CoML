@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.llms import OpenAI
 
-from coml.constants import *
+from .constants import *
 
 LLM_MODELS = {
     "suggest": lambda: OpenAI(model_name="text-davinci-003", temperature=0),

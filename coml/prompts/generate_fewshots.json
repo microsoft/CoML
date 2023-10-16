@@ -1,0 +1,70 @@
+[
+  {
+    "variables": {
+      "url": "\"https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv\"",
+      "chipo": "pandas.DataFrame(shape=(4622, 5), columns=[\"order_id\", \"quantity\", \"item_name\", \"choice_description\", \"item_price\"])\n          order_id  quantity    item_name choice_description item_price\n    0            1         1  Chips an...          NaN           $2.39 \n    1            1         1         Izze  [Clement...           $3.39 \n    ...        ...       ...          ...          ...              ...\n    4620      1834         1  Chicken ...  [Fresh T...           $8.75 \n    4621      1834         1  Chicken ...  [Fresh T...           $8.75"
+    },
+    "codes": [
+      "import pandas as pd",
+      "# Import the dataset from this [address](https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv).\n# \n# Assign it to a variable called chipo.\nurl = 'https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv'\n\nchipo = pd.read_csv(url, sep = '\\t')"
+    ],
+    "request": "How many products cost more than $10.00?",
+    "answer": "# clean the item_price column and transform it in a float\nprices = [float(value[1 : -1]) for value in chipo.item_price]\n\n# reassign the column with the cleaned prices\nchipo.item_price = prices\n\n# delete the duplicates in item_name and quantity\nchipo_filtered = chipo.drop_duplicates(['item_name','quantity','choice_description'])\n\n# calculate the price per item and query the ones that are greater than $10.00\nchipo['price_per_item'] = chipo.item_price / chipo.quantity\nchipo.query('price_per_item > 10').item_name.nunique()"
+  },
+  {
+    "variables": {
+      "drinks": "pandas.DataFrame(shape=(193, 6), columns=[\"country\", \"beer_servings\", \"spirit_servings\", \"wine_servings\", \"total_litres_of_pure_alcohol\", ...])\n             country  beer_servings  spirit_servings  wine_servings  total_litres_of_pure_alcohol continent\n    0    Afghanistan            0              0                0            0.0                         AS\n    1        Albania           89            132               54            4.9                         EU\n    ..           ...          ...            ...              ...            ...                        ...\n    191       Zambia           32             19                4            2.5                         AF\n    192     Zimbabwe           64             18                4            4.7                         AF",
+      "beer_avg_by_continent": "pandas.Series(shape=(5,))"
+    },
+    "codes": [
+      "import pandas as pd",
+      "# Import the dataset from this [address](https://raw.githubusercontent.com/justmarkham/DAT8/master/data/drinks.csv).\n# \n# Assign it to a variable called drinks.\ndrinks = pd.read_csv('https://raw.githubusercontent.com/justmarkham/DAT8/master/data/drinks.csv')",
+      "# Which continent drinks more beer on average?\n# Group by continent and calculate the mean of beer_servings\nbeer_avg_by_continent = drinks.groupby('continent')['beer_servings'].mean()\n\n# Find the continent with the highest average beer consumption\nbeer_avg_by_continent.idxmax()"
+    ],
+    "request": "For each continent show the statistics for wine consumption.",
+    "answer": "drinks.groupby('continent').wine_servings.describe()"
+  },
+  {
+    "variables": {
+      "cars1": "pandas.DataFrame(shape=(198, 14), columns=[\"mpg\", \"cylinders\", \"displacement\", \"horsepower\", \"weight\", ...])\n          mpg  cylinders  displacement  ... Unnamed: 11  Unnamed: 12  Unnamed: 13\n    0    18.0          8          307   ...         NaN          NaN          NaN\n    1    15.0          8          350   ...         NaN          NaN          NaN\n    ..    ...        ...          ...   ...         ...          ...          ...\n    196  24.5          4           98   ...         NaN          NaN          NaN\n    197  29.0          4           90   ...         NaN          NaN          NaN",
+      "cars2": "pandas.DataFrame(shape=(200, 9), columns=[\"mpg\", \"cylinders\", \"displacement\", \"horsepower\", \"weight\", ...])\n          mpg  cylinders  displacement  ... model  origin          car\n    0    33.0          4           91   ...    76       3  honda civic\n    1    20.0          6          225   ...    76       1  dodge as...\n    ..    ...        ...          ...   ...   ...     ...          ...\n    198  28.0          4          120   ...    82       1  ford ranger\n    199  31.0          4          119   ...    82       1   chevy s-10"
+    },
+    "codes": [
+      "import pandas as pd\nimport numpy as np",
+      "# Import the first dataset [cars1](https://raw.githubusercontent.com/guipsamora/pandas_exercises/master/05_Merge/Auto_MPG/cars1.csv) and [cars2](https://raw.githubusercontent.com/guipsamora/pandas_exercises/master/05_Merge/Auto_MPG/cars2.csv).\n# \n# Assign each to a to a variable called cars1 and cars2\ncars1 = pd.read_csv(\"https://raw.githubusercontent.com/guipsamora/pandas_exercises/master/05_Merge/Auto_MPG/cars1.csv\")\ncars2 = pd.read_csv(\"https://raw.githubusercontent.com/guipsamora/pandas_exercises/master/05_Merge/Auto_MPG/cars2.csv\")"
+    ],
+    "request": "Oops, it seems our first dataset has some unnamed blank columns, fix cars1",
+    "answer": "cars1 = cars1.loc[:, \"mpg\":\"car\"]"
+  },
+  {
+    "variables": {
+      "apple": "pandas.DataFrame(shape=(8465, 6), columns=[\"Open\", \"High\", \"Low\", \"Close\", \"Volume\", ...])\n                 Open   High    Low  Close     Volume  Adj Close\n    Date                                                        \n    1980-12-12  28.75  28.87  28.75  28.75  117258400       0.45\n    1980-12-15  27.38  27.38  27.25  27.25   43971200       0.42\n    ...           ...    ...    ...    ...        ...        ...\n    2014-07-07  94.14  95.99  94.10  95.97   56305400      95.97\n    2014-07-08  96.27  96.80  93.92  95.35   65130000      95.35"
+    },
+    "codes": [
+      "import pandas as pd\nimport numpy as np",
+      "# Import the dataset from this [address](https://raw.githubusercontent.com/guipsamora/pandas_exercises/master/09_Time_Series/Apple_Stock/appl_1980_2014.csv)\n# \n# Assign it to a variable apple\napple = pd.read_csv('https://raw.githubusercontent.com/guipsamora/pandas_exercises/master/09_Time_Series/Apple_Stock/appl_1980_2014.csv')",
+      "# Check out the type of the columns\napple.dtypes",
+      "# Transform the Date column as a datetime type\napple['Date'] = pd.to_datetime(apple['Date'])",
+      "# Set the date as the index\napple = apple.set_index('Date')",
+      "# Is there any duplicate dates?\napple.index.is_unique",
+      "# Ops...it seems the index is from the most recent date. Make the first entry the oldest date.\napple = apple.sort_index(ascending = True)",
+      "# Get the last business day of each month. Return a list of pandas timestamps.\napple.resample('BM').last().index.to_list()"
+    ],
+    "request": "What is the difference in days between the first day and the oldest",
+    "answer": "(apple.index.max() - apple.index.min()).days"
+  },
+  {
+    "variables": {
+      "Counter": "<class 'collections.Counter'>",
+      "url": "\"https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv\"",
+      "chipo": "pandas.DataFrame(shape=(4622, 5), columns=[\"order_id\", \"quantity\", \"item_name\", \"choice_description\", \"item_price\"])\n          order_id  quantity    item_name choice_description item_price\n    0            1         1  Chips an...          NaN           $2.39 \n    1            1         1         Izze  [Clement...           $3.39 \n    ...        ...       ...          ...          ...              ...\n    4620      1834         1  Chicken ...  [Fresh T...           $8.75 \n    4621      1834         1  Chicken ...  [Fresh T...           $8.75"
+    },
+    "codes": [
+      "import pandas as pd\nimport matplotlib.pyplot as plt\nfrom collections import Counter",
+      "# Import the dataset from this [address](https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv).\n# \n# Assign it to a variable called chipo.\nurl = 'https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv'\n    \nchipo = pd.read_csv(url, sep = '\\t')",
+      "# See the first 10 entries\nchipo.head(10)"
+    ],
+    "request": "Create a histogram of the top 5 items bought",
+    "answer": "# get the Series of the names\nx = chipo.item_name\n\n# use the Counter class from collections to create a dictionary with keys(text) and frequency\nletter_counts = Counter(x)\n\n# convert the dictionary to a DataFrame\ndf = pd.DataFrame.from_dict(letter_counts, orient='index')\n\n# sort the values from the top to the least value and slice the first 5 items\ndf = df[0].sort_values(ascending = True)[45:50]\n\n# create the plot\ndf.plot(kind='bar')\n\n# Set the title and labels\nplt.xlabel('Items')\nplt.ylabel('Number of Times Ordered')\nplt.title('Most ordered Chipotle\\'s Items')\n\n# show the plot\nplt.show()"
+  }
+]

@@ -32,6 +32,9 @@ MANIFEST
 *.manifest
 *.spec
 
+# Version file is handled by hatchling
+coml/_version.py
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
@@ -77,6 +80,17 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+
+# Jupyter Lab
+*.bundle.*
+node_modules/
+.yarn/
+yarn.lock
+*.log
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+labextension
 
 # IPython
 profile_default/
@@ -151,6 +165,9 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# Code styling tools
+.isort.cfg
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can

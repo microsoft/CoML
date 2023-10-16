@@ -1,0 +1,111 @@
+[
+  {
+    "variables": {
+      "url": "\"https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv\"",
+      "chipo": "pandas.DataFrame(shape=(4622, 6), columns=[\"order_id\", \"quantity\", \"item_name\", \"choice_description\", \"item_price\", ...])\n          order_id  quantity    item_name choice_description  item_price  price_per_item\n    0            1         1  Chips an...          NaN              2.39         2.39   \n    1            1         1         Izze  [Clement...              3.39         3.39   \n    ...        ...       ...          ...          ...               ...          ...   \n    4620      1834         1  Chicken ...  [Fresh T...              8.75         8.75   \n    4621      1834         1  Chicken ...  [Fresh T...              8.75         8.75",
+      "prices": "[2.39, 3.39, 3.39, 2.39, 16.98, ...]",
+      "chipo_filtered": "pandas.DataFrame(shape=(1949, 5), columns=[\"order_id\", \"quantity\", \"item_name\", \"choice_description\", \"item_price\"])\n          order_id  quantity    item_name choice_description  item_price\n    0            1         1  Chips an...          NaN              2.39\n    1            1         1         Izze  [Clement...              3.39\n    ...        ...       ...          ...          ...               ...\n    4611      1830         1  Veggie B...  [Tomatil...             11.25\n    4612      1831         1  Carnitas...  [Fresh T...              9.25"
+    },
+    "codes": [
+      "import pandas as pd",
+      "# Import the dataset from this [address](https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv).\n# \n# Assign it to a variable called chipo.\nurl = 'https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv'\n\nchipo = pd.read_csv(url, sep = '\\t')",
+      "# How many products cost more than $10.00?\n# clean the item_price column and transform it in a float\nprices = [float(value[1 : -1]) for value in chipo.item_price]\n\n# reassign the column with the cleaned prices\nchipo.item_price = prices\n\n# delete the duplicates in item_name and quantity\nchipo_filtered = chipo.drop_duplicates(['item_name','quantity','choice_description'])\n\n# calculate the price per item and query the ones that are greater than $10.00\nchipo['price_per_item'] = chipo.item_price / chipo.quantity\nchipo.query('price_per_item > 10').item_name.nunique()"
+    ],
+    "request": "What is the price of each item? \nReturn a data frame with only two columns item_name and item_price, sorted from the most to less expensive",
+    "first_attempt": "item_prices = chipo.groupby('item_name')['item_price'].max()\nitem_prices_df = pd.DataFrame({'item_name': item_prices.index, 'item_price': item_prices.values})\nitem_prices_df.sort_values(by='item_price', ascending=False)",
+    "interactions": [
+      {
+        "error": null,
+        "output": "                                item_name  item_price\n24           Chips and Fresh Tomato Salsa       44.25\n11                          Carnitas Bowl       35.25\n..                                    ...         ...\n26      Chips and Mild Fresh Tomato Salsa        3.00\n28     Chips and Roasted Chili-Corn Salsa        2.39",
+        "hint": "The item_price column in chipo refers to the total price of order.",
+        "explanation": "1. `item_prices = chipo.groupby('item_name')['item_price'].max()`: This calculates the highest price for each unique item using the 'item_name' column as groups.\n2. `item_prices_df = pd.DataFrame(...)`: This creates a DataFrame with 'item_name' and 'item_price' columns, using the calculated maximum prices.\n3. `item_prices_df.sort_values(by='item_price', ascending=False)`: This sorts the DataFrame by 'item_price' in descending order, showing items with the highest prices at the top.",
+        "observation": "The code didn't filter out orders with quantity > 1. So the prices are not correct.",
+        "code": "# Filter out orders with quantity > 1\nchipo_single_item = chipo[chipo['quantity'] == 1]\n# Calculate the total price for each item\nitem_prices = chipo_single_item.groupby('item_name')['item_price'].mean()\n# Create a DataFrame with item_name and item_price columns\nitem_prices_df = pd.DataFrame({'item_name': item_prices.index, 'item_price': item_prices.values})\n# Sort the DataFrame by item_price in descending order\nitem_prices_df.sort_values(by='item_price', ascending=False)"
+      },
+      {
+        "error": null,
+        "output": "                                item_name  item_price\n15                    Carnitas Salad Bowl   11.056667\n42                       Steak Salad Bowl   10.964074\n..                                    ...         ...\n10                      Canned Soft Drink    1.250000\n9                             Canned Soda    1.090000",
+        "hint": "Do not take the mean of item_price. Use the first price for each item instead.",
+        "explanation": "1. `chipo_single_item = chipo[chipo['quantity'] == 1]`: Filters out orders with a quantity greater than 1, creating a new DataFrame.\n2. `item_prices = chipo_single_item.groupby('item_name')['item_price'].mean()`: Calculates the average price per unique item.\n3. `item_prices_df = pd.DataFrame(...)`: Creates a DataFrame with item names and their average prices.\n4. `item_prices_df.sort_values(by='item_price', ascending=False)`: Sorts the DataFrame by average item price in descending order, presenting the highest priced items first.",
+        "observation": "The code computes the average of item_price, but the user wants the first price.",
+        "code": "# delete the duplicates in item_name and quantity\nchipo_filtered = chipo.drop_duplicates(['item_name','quantity'])\n\n# select only the products with quantity equals to 1\nchipo_one_prod = chipo_filtered[chipo_filtered.quantity == 1]\n\n# select only the item_name and item_price columns\nchipo_one_prod[['item_name', 'item_price']].sort_values(by = \"item_price\", ascending = False)"
+      }
+    ]
+  },
+  {
+    "variables": {
+      "users": "pandas.DataFrame(shape=(943, 4), columns=[\"age\", \"gender\", \"occupation\", \"zip_code\"])\n             age gender  occupation zip_code\n    user_id                                 \n    1         24      M  technician    85711\n    2         53      F       other    94043\n    ...      ...    ...         ...      ...\n    942       48      F   librarian    78209\n    943       22      M     student    77841"
+    },
+    "codes": [
+      "import pandas as pd",
+      "# Import the dataset from this [address](https://raw.githubusercontent.com/justmarkham/DAT8/master/data/u.user).\n# \n# Assign it to a variable called users.\nusers = pd.read_table('https://raw.githubusercontent.com/justmarkham/DAT8/master/data/u.user', \n                      sep='|', index_col='user_id')",
+      "# Discover what is the mean age per occupation\nusers.groupby('occupation').age.mean()"
+    ],
+    "request": "Discover the Male ratio per occupation and sort it from the most to the least",
+    "answer": "# create a function\ndef gender_to_numeric(x):\n    if x == 'M':\n        return 1\n    if x == 'F':\n        return 0\n\n# apply the function to the gender column and create a new column\nusers['gender_n'] = users['gender'].apply(gender_to_numeric)\n\n\na = users.groupby('occupation').gender_n.sum() / users.occupation.value_counts() * 100 \n\n# sort to the most male \na.sort_values(ascending = False)",
+    "first_attempt": "(users[users['gender'] == 'M'].groupby('occupation').gender.count() / users.groupby('occupation').gender.count()).sort_values(ascending=False)",
+    "interactions": [
+      {
+        "error": null,
+        "output": "occupation\ndoctor           1.000000\nengineer         0.970149\n...                   ...\nhealthcare       0.312500\nhomemaker        0.142857\nName: gender, dtype: float64",
+        "hint": "Please show the ratio in percentage.",
+        "explanation": "This code calculates the proportion of male users for each occupation in the 'users' DataFrame, then sorts and presents these proportions in descending order.",
+        "observation": "The code is almost correct, but the user wants the ratio in percentage.",
+        "code": "male_ratio_per_occupation = (users[users['gender'] == 'M'].groupby('occupation').gender.count() / users.groupby('occupation').gender.count() * 100).sort_values(ascending=False)"
+      }
+    ]
+  },
+  {
+    "variables": {
+      "flow": "pandas.DataFrame(shape=(44, 8), columns=[\"Total Equity\", \"Domestic Equity\", \"World Equity\", \"Hybrid\", \"Total Bond\", ...])\n                Total Equity  Domestic Equity  World Equity  ...  Taxable Bond  Municipal Bond  Total\n    Date                                                     ...                                     \n    2012-12-05        -7426         -6060            -1367   ...         4210          1107     -2183\n    2012-12-12        -8783         -7520            -1263   ...         1598           219     -6842\n    ...                 ...           ...              ...   ...          ...           ...       ...\n    2015-04-01        -1527         -3307             1780   ...        -1392            96     -2103\n    2015-04-08         1906         -1321             3227   ...         1906          -187      3875"
+    },
+    "codes": [
+      "import numpy as np\nimport pandas as pd",
+      "# Import the dataset from this [address](https://raw.githubusercontent.com/datasets/investor-flow-of-funds-us/master/data/weekly.csv).\n# \n# Assign it to a variable called flow\nflow = pd.read_csv(\n   \"https://raw.githubusercontent.com/datasets/investor-flow-of-funds-us/master/data/weekly.csv\",\n)",
+      "# Set the column Date as the index and set the index to a DatetimeIndex type. Modify the flow dataframe in place.\nflow = flow.set_index('Date')\nflow.index = pd.to_datetime(flow.index)"
+    ],
+    "request": "What is the frequency of the dataset?",
+    "first_attempt": "flow.index.freq",
+    "interactions": [
+      {
+        "error": null,
+        "output": null,
+        "hint": null,
+        "explanation": "In time series data, the .index.freq in Pandas refers to the frequency of the DateTimeIndex. It helps identify how often data points occur, like daily, weekly, etc. You can use .index.freq to access or set the frequency for the DateTimeIndex in your code. If the data has a regular pattern, this attribute can be quite useful for analysis and manipulation.",
+        "observation": "The returned value is None, which means the frequency is not set.",
+        "code": "pd.infer_freq(flow.index)"
+      },
+      {
+        "error": null,
+        "output": null,
+        "hint": null,
+        "explanation": "The pd.infer_freq() function is used to automatically determine the frequency of a DateTimeIndex based on the time intervals between consecutive dates in the index. It analyzes the time gaps between the dates and tries to identify the most likely frequency that fits the pattern of the data. This function is applied to the DateTimeIndex of the `flow` DataFrame. It attempts to figure out the most appropriate frequency for the time series data based on the pattern of dates.",
+        "observation": "The returned value is still None. Notice that the gaps between dates are not regular. Some dates are skipped. Therefore the frequency needs to be inferred on a partial index.",
+        "code": "pd.infer_freq(flow.index[-3:])"
+      }
+    ]
+  },
+  {
+    "variables": {
+      "url": "\"https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv\"",
+      "chipo": "pandas.DataFrame(shape=(4622, 5), columns=[\"order_id\", \"quantity\", \"item_name\", \"choice_description\", \"item_price\"])\n          order_id  quantity    item_name choice_description item_price\n    0            1         1  Chips an...          NaN           $2.39 \n    1            1         1         Izze  [Clement...           $3.39 \n    ...        ...       ...          ...          ...              ...\n    4620      1834         1  Chicken ...  [Fresh T...           $8.75 \n    4621      1834         1  Chicken ...  [Fresh T...           $8.75"
+    },
+    "codes": [
+      "import pandas as pd\nimport numpy as np",
+      "# Import the dataset from this [address](https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv).\n# \n# Assign it to a variable called chipo.\nurl = 'https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv'\n    \nchipo = pd.read_csv(url, sep = '\\t')",
+      "# See the first 10 entries\nchipo.head(10)"
+    ],
+    "request": "What is the number of observations in the dataset?",
+    "first_attempt": "import pandas as pd\nurl = \"https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv\"\nchipo = pd.DataFrame(shape=(4622, 5), columns=pd.Index(['order_id', 'quantity', 'item_name', 'choice_description', 'item_price'], dtype='object'))",
+    "interactions": [
+      {
+        "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nTypeError: DataFrame.__init__() got an unexpected keyword argument 'shape'\n",
+        "output": null,
+        "hint": "You should use existing DataFrames.",
+        "explanation": "1. `import pandas as pd`: Imports the Pandas library and assigns it the alias `pd`.\n2. `url = \"https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv\"`: Defines a URL string pointing to a dataset (in TSV format) related to Chipotle orders.\n3. `chipo = pd.DataFrame(shape=(4622, 5), columns=pd.Index(['order_id', 'quantity', 'item_name', 'choice_description', 'item_price'], dtype='object'))`: Creates a new DataFrame named `chipo` using the `pd.DataFrame()` constructor. Defines the column names using `pd.Index()`, which are 'order_id', 'quantity', 'item_name', 'choice_description', and 'item_price'. Sets the data type of the columns as 'object'. The error occurred in the original code because the shape parameter is not a valid parameter for initializing a DataFrame using the pd.DataFrame() constructor.",
+        "observation": "The code creates a new DataFrame, but the user wants to use the existing DataFrame `chipo`. Also, the code uses the `shape` parameter, which is not a valid parameter.",
+        "code": "chipo.shape[0]  # entries <= 4622 observations"
+      }
+    ]
+  }
+]
