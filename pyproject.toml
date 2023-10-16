@@ -7,6 +7,7 @@ name = "coml"
 version = "0.0.1"
 dependencies = [
   "click",
+  "colorama",
   "langchain",
   "numpy",
   "orjson",
@@ -132,7 +133,7 @@ skip = '''
   .venv/*
   reports/*
   dist/*
-  node_modules/*
+  node_modules
 '''
 
 [project.optional-dependencies]
