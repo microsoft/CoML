@@ -133,7 +133,7 @@ skip = '''
   .venv/*
   reports/*
   dist/*
-  node_modules/*
+  node_modules
 '''
 
 [project.optional-dependencies]
