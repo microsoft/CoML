@@ -3,27 +3,31 @@ from __future__ import annotations
 import json
 import re
 import types
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypedDict
+
 
 class GenerateContextIncomplete(TypedDict):
     variables: dict[str, str]
     codes: list[str]
     request: str
 
+
 class GenerateContext(GenerateContextIncomplete):
     answer: str
+
 
 class InteractionIncomplete(TypedDict):
     error: str | None
     output: str | None
     hint: str | None
 
+
 class Interaction(InteractionIncomplete):
     explanation: str
     observation: str
     code: str
+
 
 class FixContext(TypedDict):
     variables: dict[str, str]
@@ -32,56 +36,90 @@ class FixContext(TypedDict):
     first_attempt: str
     interactions: list[InteractionIncomplete | Interaction]
 
+
 PANDAS_DESCRIPTION_CONFIG: Any = dict(max_cols=10, max_colwidth=20, max_rows=10)
 MAXIMUM_LIST_ITEMS = 30
 
+
 def describe_variable(value: Any) -> str:
-    import numpy, pandas
+    import numpy
+    import pandas
+
     if isinstance(value, numpy.ndarray):
-        return 'numpy.ndarray(shape={}, dtype={})'.format(value.shape, value.dtype)
+        return "numpy.ndarray(shape={}, dtype={})".format(value.shape, value.dtype)
     elif isinstance(value, pandas.DataFrame):
-        return 'pandas.DataFrame(shape={}, columns={})\n{}'.format(
+        return "pandas.DataFrame(shape={}, columns={})\n{}".format(
             value.shape,
             describe_variable(value.columns.tolist()),
-            add_indent(value.to_string(**PANDAS_DESCRIPTION_CONFIG).rstrip())
+            add_indent(value.to_string(**PANDAS_DESCRIPTION_CONFIG).rstrip()),
         )
     elif isinstance(value, pandas.Series):
-        return 'pandas.Series(shape={})'.format(value.shape)
+        return "pandas.Series(shape={})".format(value.shape)
     elif isinstance(value, list):
         if len(value) > MAXIMUM_LIST_ITEMS:
-            return '[{}, ...]'.format(', '.join(describe_variable(v) for v in value[:MAXIMUM_LIST_ITEMS]))
-        return '[{}]'.format(', '.join(describe_variable(v) for v in value))
+            return "[{}, ...]".format(
+                ", ".join(describe_variable(v) for v in value[:MAXIMUM_LIST_ITEMS])
+            )
+        return "[{}]".format(", ".join(describe_variable(v) for v in value))
     elif isinstance(value, dict):
         if len(value) > MAXIMUM_LIST_ITEMS:
-            return '{{{}, ...}}'.format(', '.join(f'{k}: {describe_variable(v)}' for k, v in list(value.items())[:MAXIMUM_LIST_ITEMS]))
-        return '{{{}}}'.format(', '.join(f'{k}: {describe_variable(v)}' for k, v in value.items()))
+            return "{{{}, ...}}".format(
+                ", ".join(
+                    f"{k}: {describe_variable(v)}"
+                    for k, v in list(value.items())[:MAXIMUM_LIST_ITEMS]
+                )
+            )
+        return "{{{}}}".format(
+            ", ".join(f"{k}: {describe_variable(v)}" for k, v in value.items())
+        )
     elif isinstance(value, str):
         return f'"{value}"'
     elif isinstance(value, (bool, int, float)):
         return str(value)
     elif value is None:
-        return 'None'
+        return "None"
     else:
         val = str(value)
         if len(val) > 300:
-            val = val[:300] + '...'
+            val = val[:300] + "..."
         return val
 
+
 def add_indent(code: str, indent: str = "    ") -> str:
-    return ''.join(indent + line for line in code.splitlines(True))
+    return "".join(indent + line for line in code.splitlines(True))
+
 
 def filter_variables(variables: dict[str, Any]) -> dict[str, Any]:
     return {
-        name: value for name, value in variables.items()
-        if not isinstance(value, (types.ModuleType, types.FunctionType, types.BuiltinFunctionType))
+        name: value
+        for name, value in variables.items()
+        if not isinstance(
+            value, (types.ModuleType, types.FunctionType, types.BuiltinFunctionType)
+        )
         and not name.startswith("__")
-        and name not in ["_ih", "In", "_i", "_ii", "_iii", "_oh", "_dh", "Out", "get_ipython", "exit", "quit", "_"]
+        and name
+        not in [
+            "_ih",
+            "In",
+            "_i",
+            "_ii",
+            "_iii",
+            "_oh",
+            "_dh",
+            "Out",
+            "get_ipython",
+            "exit",
+            "quit",
+            "_",
+        ]
         and not re.match(r"_i\d+", name)
     }
 
+
 def extract_shot(problem_path: Path | str, index: int) -> dict:
     # https://github.com/ultmaster/pandas_exercises
-    from dseval import ProblemSet, Environment
+    from dseval import Environment, ProblemSet
+
     problems = ProblemSet.fromfile(Path(problem_path))
     environment = Environment()
 
@@ -93,26 +131,45 @@ def extract_shot(problem_path: Path | str, index: int) -> dict:
             answer = environment.execute(problem.reference_code)
             code = problem.reference_code
             if problem.question:
-                prompt = "".join(["# " + question_line for question_line in problem.question.rstrip().splitlines(True)])
+                prompt = "".join(
+                    [
+                        "# " + question_line
+                        for question_line in problem.question.rstrip().splitlines(True)
+                    ]
+                )
                 code = prompt.rstrip() + "\n" + code
             codes.append(code)
 
     return {
-        "variables": {key: describe_variable(value) for key, value in filter_variables(environment.namespace).items()},
+        "variables": {
+            key: describe_variable(value)
+            for key, value in filter_variables(environment.namespace).items()
+        },
         "codes": codes,
         "request": problems[index].question,
         "answer": problems[index].reference_code,
     }
 
+
 def render_code(code: str) -> str:
     return "```python\n" + code.rstrip() + "\n```"
+
 
 def render_ipython_cells(codes: list[str]) -> str:
     return "".join(f"# %%\n{code.rstrip()}\n\n" for code in codes)
 
-def render_generate_context(context: GenerateContext | GenerateContextIncomplete) -> tuple[str, str | None]:
+
+def render_generate_context(
+    context: GenerateContext | GenerateContextIncomplete,
+) -> tuple[str, str | None]:
     if context["variables"]:
-        variables = "Variables:\n\n" + "".join(f"{name}: {desc}\n" for name, desc in context["variables"].items()) + "\n\n"
+        variables = (
+            "Variables:\n\n"
+            + "".join(
+                f"{name}: {desc}\n" for name, desc in context["variables"].items()
+            )
+            + "\n\n"
+        )
     else:
         variables = "No variables available currently.\n\n"
     if context["codes"]:
@@ -128,13 +185,16 @@ def render_generate_context(context: GenerateContext | GenerateContextIncomplete
 
     return code + variables + request, answer
 
+
 def render_fix_context(context: FixContext) -> list[str]:
     all_interactions: list[str] = []
     task_begin = "### Task Start ###\n\n"
     if context["request"] is None:
-        interaction_prefix = task_begin + \
-            "I wrote the following code and it's problematic. Please help fix it.\n\n" + \
-            render_code(context["first_attempt"])
+        interaction_prefix = (
+            task_begin
+            + "I wrote the following code and it's problematic. Please help fix it.\n\n"
+            + render_code(context["first_attempt"])
+        )
     else:
         first_request, _ = render_generate_context(context)  # type: ignore
         first_request = task_begin + first_request
@@ -145,33 +205,66 @@ def render_fix_context(context: FixContext) -> list[str]:
             if interaction_prefix:
                 instruction = interaction_prefix
             else:
-                instruction = "The generated code is problematic. Please help fix it.\n\n"
+                instruction = (
+                    "The generated code is problematic. Please help fix it.\n\n"
+                )
         else:
             instruction = "The code is still problematic. Please help fix it.\n\n"
 
         if interaction["error"]:
-            error = "- The code is executed with the following exception:\n" + add_indent(interaction["error"].rstrip(), "  ") + "\n\n"
+            error = (
+                "- The code is executed with the following exception:\n"
+                + add_indent(interaction["error"].rstrip(), "  ")
+                + "\n\n"
+            )
         else:
             error = "- The code is executed without any exception.\n\n"
 
         if interaction["output"]:
-            output = "- The code is executed in a IPython cell, and here is its output:\n" + add_indent(interaction["output"].rstrip(), "  ") + "\n\n"
+            output = (
+                "- The code is executed in a IPython cell, and here is its output:\n"
+                + add_indent(interaction["output"].rstrip(), "  ")
+                + "\n\n"
+            )
         else:
-            output = "- The code is executed in a IPython cell, and it has NO OUTPUT.\n\n"
+            output = (
+                "- The code is executed in a IPython cell, and it has NO OUTPUT.\n\n"
+            )
 
         if interaction["hint"]:
-            hint = "- Here is a hint from the user: " + interaction["hint"].rstrip() + "\n\n"
+            hint = (
+                "- Here is a hint from the user: "
+                + interaction["hint"].rstrip()
+                + "\n\n"
+            )
         else:
             hint = "- The user did not provide any hint.\n\n"
 
-        post_instruction = "With the information above, please first explain the code line-by-line, and then observe what might be wrong. Finally, you should provide the fixed code. If you think the code is correct, you can simply write \"THE CODE IS CORRECT.\" in the observation section."
+        post_instruction = 'With the information above, please first explain the code line-by-line, and then observe what might be wrong. Finally, you should provide the fixed code. If you think the code is correct, you can simply write "THE CODE IS CORRECT." in the observation section.'
 
         all_interactions.append(instruction + error + output + hint + post_instruction)
 
-        if "explanation" in interaction and "observation" in interaction and "code" in interaction:
-            explanation = "Here is a line-by-line explanation of the code:\n" + interaction["explanation"].rstrip() + "\n\n"
-            observation = "Observe what is wrong with the code:\n" + interaction["observation"].rstrip() + "\n\n"
-            all_interactions.append(explanation + observation + "The fixed code:\n\n" + render_code(interaction["code"]))
+        if (
+            "explanation" in interaction
+            and "observation" in interaction
+            and "code" in interaction
+        ):
+            explanation = (
+                "Here is a line-by-line explanation of the code:\n"
+                + interaction["explanation"].rstrip()
+                + "\n\n"
+            )
+            observation = (
+                "Observe what is wrong with the code:\n"
+                + interaction["observation"].rstrip()
+                + "\n\n"
+            )
+            all_interactions.append(
+                explanation
+                + observation
+                + "The fixed code:\n\n"
+                + render_code(interaction["code"])
+            )
 
     return all_interactions
 
@@ -191,7 +284,7 @@ FIX_INSTRUCTION = f"""{GENERATE_INSTRUCTION.rstrip()}
 """
 
 SUGGEST_INSTRUCTION = """You're a data scientist. Given the code that has already been written, suggest three things that can be done next. Write the response in the following format:
-    
+
 1. ...
 2. ...
 3. ...
@@ -201,18 +294,23 @@ The suggestions should be specific, actionable, yet concise.
 
 EXPLAIN_INSTRUCTION = "You are a data scientist. Please generate a line-by-line explanation for the code given."
 
+
 def cached_generate_fewshots() -> list[GenerateContext]:
     with open(Path(__file__).parent / "prompts/generate_fewshots.json") as f:
         return json.load(f)
+
 
 def cached_fix_fewshots() -> list[FixContext]:
     with open(Path(__file__).parent / "prompts/fix_fewshots.json") as f:
         return json.load(f)
 
+
 def update_generate_fewshots():
     GENERATE_FEWSHOTS = [
         extract_shot("../pandas_exercises/outputs/02-filtering-sorting-chipotle.py", 2),
-        extract_shot("../pandas_exercises/outputs/03-grouping-alcohol-consumption.py", 3),
+        extract_shot(
+            "../pandas_exercises/outputs/03-grouping-alcohol-consumption.py", 3
+        ),
         extract_shot("../pandas_exercises/outputs/05-merge-auto-mpg.py", 2),
         extract_shot("../pandas_exercises/outputs/09-time-series-apple-stock.py", 8),
         extract_shot("../pandas_exercises/outputs/07-visualization-chipotle.py", 3),
@@ -220,9 +318,14 @@ def update_generate_fewshots():
     with open(Path(__file__).parent / "prompts/generate_fewshots.json", "w") as f:
         json.dump(GENERATE_FEWSHOTS, f, indent=2)
 
+
 def update_fix_fewshots():
-    shot0 = extract_shot("../pandas_exercises/outputs/02-filtering-sorting-chipotle.py", 3)
-    shot0["first_attempt"] = """item_prices = chipo.groupby('item_name')['item_price'].max()
+    shot0 = extract_shot(
+        "../pandas_exercises/outputs/02-filtering-sorting-chipotle.py", 3
+    )
+    shot0[
+        "first_attempt"
+    ] = """item_prices = chipo.groupby('item_name')['item_price'].max()
 item_prices_df = pd.DataFrame({'item_name': item_prices.index, 'item_price': item_prices.values})
 item_prices_df.sort_values(by='item_price', ascending=False)"""
     answer = shot0.pop("answer")
@@ -263,12 +366,14 @@ item_prices_df.sort_values(by='item_price', ascending=False)""",
 3. `item_prices_df = pd.DataFrame(...)`: Creates a DataFrame with item names and their average prices.
 4. `item_prices_df.sort_values(by='item_price', ascending=False)`: Sorts the DataFrame by average item price in descending order, presenting the highest priced items first.""",
             "observation": "The code computes the average of item_price, but the user wants the first price.",
-            "code": answer
-        }
+            "code": answer,
+        },
     ]
 
     shot1 = extract_shot("../pandas_exercises/outputs/03-grouping-occupation.py", 3)
-    shot1["first_attempt"] = "(users[users['gender'] == 'M'].groupby('occupation').gender.count() / users.groupby('occupation').gender.count()).sort_values(ascending=False)"
+    shot1[
+        "first_attempt"
+    ] = "(users[users['gender'] == 'M'].groupby('occupation').gender.count() / users.groupby('occupation').gender.count()).sort_values(ascending=False)"
     shot1["interactions"] = [
         {
             "error": None,
@@ -282,11 +387,13 @@ Name: gender, dtype: float64""",
             "hint": "Please show the ratio in percentage.",
             "explanation": "This code calculates the proportion of male users for each occupation in the 'users' DataFrame, then sorts and presents these proportions in descending order.",
             "observation": "The code is almost correct, but the user wants the ratio in percentage.",
-            "code": "male_ratio_per_occupation = (users[users['gender'] == 'M'].groupby('occupation').gender.count() / users.groupby('occupation').gender.count() * 100).sort_values(ascending=False)"
+            "code": "male_ratio_per_occupation = (users[users['gender'] == 'M'].groupby('occupation').gender.count() / users.groupby('occupation').gender.count() * 100).sort_values(ascending=False)",
         }
     ]
 
-    shot2 = extract_shot("../pandas_exercises/outputs/09-time-series-investor-flow-of-funds-us.py", 3)
+    shot2 = extract_shot(
+        "../pandas_exercises/outputs/09-time-series-investor-flow-of-funds-us.py", 3
+    )
     answer = shot2.pop("answer")
     shot2["first_attempt"] = "flow.index.freq"
     shot2["interactions"] = [
@@ -304,12 +411,16 @@ Name: gender, dtype: float64""",
             "hint": None,
             "explanation": """The pd.infer_freq() function is used to automatically determine the frequency of a DateTimeIndex based on the time intervals between consecutive dates in the index. It analyzes the time gaps between the dates and tries to identify the most likely frequency that fits the pattern of the data. This function is applied to the DateTimeIndex of the `flow` DataFrame. It attempts to figure out the most appropriate frequency for the time series data based on the pattern of dates.""",
             "observation": "The returned value is still None. Notice that the gaps between dates are not regular. Some dates are skipped. Therefore the frequency needs to be inferred on a partial index.",
-            "code": answer
-        }
+            "code": answer,
+        },
     ]
 
-    shot3 = extract_shot("../pandas_exercises/outputs/01-getting-knowing-your-data-chipotle.py", 3)
-    shot3["first_attempt"] = """import pandas as pd
+    shot3 = extract_shot(
+        "../pandas_exercises/outputs/01-getting-knowing-your-data-chipotle.py", 3
+    )
+    shot3[
+        "first_attempt"
+    ] = """import pandas as pd
 url = "https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv"
 chipo = pd.DataFrame(shape=(4622, 5), columns=pd.Index(['order_id', 'quantity', 'item_name', 'choice_description', 'item_price'], dtype='object'))"""
     answer = shot3.pop("answer")
@@ -325,12 +436,13 @@ TypeError: DataFrame.__init__() got an unexpected keyword argument 'shape'
 2. `url = "https://raw.githubusercontent.com/justmarkham/DAT8/master/data/chipotle.tsv"`: Defines a URL string pointing to a dataset (in TSV format) related to Chipotle orders.
 3. `chipo = pd.DataFrame(shape=(4622, 5), columns=pd.Index(['order_id', 'quantity', 'item_name', 'choice_description', 'item_price'], dtype='object'))`: Creates a new DataFrame named `chipo` using the `pd.DataFrame()` constructor. Defines the column names using `pd.Index()`, which are 'order_id', 'quantity', 'item_name', 'choice_description', and 'item_price'. Sets the data type of the columns as 'object'. The error occurred in the original code because the shape parameter is not a valid parameter for initializing a DataFrame using the pd.DataFrame() constructor.""",
             "observation": "The code creates a new DataFrame, but the user wants to use the existing DataFrame `chipo`. Also, the code uses the `shape` parameter, which is not a valid parameter.",
-            "code": answer
+            "code": answer,
         }
     ]
 
     with open(Path(__file__).parent / "prompts/fix_fewshots.json", "w") as f:
         json.dump([shot0, shot1, shot2, shot3], f, indent=2)
+
 
 def updateall():
     global PANDAS_DESCRIPTION_CONFIG, MAXIMUM_LIST_ITEMS
@@ -338,6 +450,7 @@ def updateall():
     MAXIMUM_LIST_ITEMS = 5
     update_generate_fewshots()
     update_fix_fewshots()
+
 
 if __name__ == "__main__":
     updateall()

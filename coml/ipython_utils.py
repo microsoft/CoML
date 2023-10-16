@@ -19,43 +19,65 @@ def is_jupyter_lab_environ() -> bool:
 def insert_cell_below(code: str, metadata: Any = None) -> None:
     if is_jupyter_lab_environ():
         try:
-            input(json.dumps({"command": "insert_cell_below", "code": code, "metadata": metadata}))
+            input(
+                json.dumps(
+                    {"command": "insert_cell_below", "code": code, "metadata": metadata}
+                )
+            )
         except EOFError:
             # e.g., invoked from a widget callback. It will run in the log console.
             from ipylab import JupyterFrontEnd
+
             app = JupyterFrontEnd()
             app.commands.execute("coml:insert_cell_below", {"code": code, "metadata": metadata})  # type: ignore
     else:
         encoded_code = base64.b64encode(code.encode()).decode()
         encoded_metadata = base64.b64encode(json.dumps(metadata).encode()).decode()
-        display(Javascript(f"""
+        display(
+            Javascript(
+                f"""
             const cell = IPython.notebook.insert_cell_below('code');
             cell.set_text(atob("{encoded_code}"));
             cell.metadata.coml = JSON.parse(atob("{encoded_metadata}"));
             cell.focus_cell();
             cell.focus_editor();
-        """))
+        """
+            )
+        )
 
 
 def run_code_in_next_cell(python_code: str, metadata: Any = None) -> None:
     if is_jupyter_lab_environ():
         try:
-            input(json.dumps({"command": "insert_and_execute_cell_below", "code": python_code, "metadata": metadata}))
+            input(
+                json.dumps(
+                    {
+                        "command": "insert_and_execute_cell_below",
+                        "code": python_code,
+                        "metadata": metadata,
+                    }
+                )
+            )
         except EOFError:
             # e.g., invoked from a widget callback
             from ipylab import JupyterFrontEnd
+
             app = JupyterFrontEnd()
             app.commands.execute("coml:insert_and_execute_cell_below", {"code": python_code, "metadata": metadata})  # type: ignore
     else:
         encoded_code = base64.b64encode(python_code.encode()).decode()
         encoded_metadata = base64.b64encode(json.dumps(metadata).encode()).decode()
-        display(Javascript(f"""
+        display(
+            Javascript(
+                f"""
             const cell = IPython.notebook.insert_cell_below('code');
             cell.set_text(atob("{encoded_code}"));
             cell.metadata.coml = JSON.parse(atob("{encoded_metadata}"));
             cell.focus_cell();
             cell.execute();
-        """))
+        """
+            )
+        )
 
 
 def get_ipython_history(ipython: InteractiveShell) -> list[str]:
@@ -65,7 +87,9 @@ def get_ipython_history(ipython: InteractiveShell) -> list[str]:
             continue
         if code.startswith("get_ipython().run_cell_magic('runit',"):
             # Whitelist
-            code_match = re.match(r"get_ipython\(\).run_cell_magic\('runit', '', (.*)\)", code)
+            code_match = re.match(
+                r"get_ipython\(\).run_cell_magic\('runit', '', (.*)\)", code
+            )
             if code_match is not None:
                 code = eval(code_match.group(1))
         if code.startswith("get_ipython().run"):

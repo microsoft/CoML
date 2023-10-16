@@ -1,43 +1,60 @@
 import warnings
 from typing import Any
 
-from IPython.core.magic import Magics, magics_class, line_magic, cell_magic, line_cell_magic, no_var_expand
-from IPython.display import Code, display
 import ipywidgets as widgets
-from langchain.chat_models import AzureChatOpenAI, ChatOpenAI
+from IPython.core.magic import (
+    Magics,
+    cell_magic,
+    line_cell_magic,
+    line_magic,
+    magics_class,
+    no_var_expand,
+)
+from IPython.display import Code, display
+from langchain.chat_models import ChatOpenAI
 
 from .core import CoMLAgent
 from .ipython_utils import (
-    get_ipython_history, run_code_in_next_cell, insert_cell_below, get_last_cell,
-    parse_cell_outputs
+    get_ipython_history,
+    get_last_cell,
+    insert_cell_below,
+    parse_cell_outputs,
+    run_code_in_next_cell,
 )
 from .prompt_utils import (
-    GenerateContext, FixContext,
-    filter_variables, describe_variable,
-    InteractionIncomplete
+    FixContext,
+    GenerateContext,
+    InteractionIncomplete,
+    describe_variable,
+    filter_variables,
 )
 
 
 @magics_class
 class CoMLMagics(Magics):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         import dotenv
+
         dotenv.load_dotenv()
-        llm = ChatOpenAI(temperature=0., model="gpt-3.5-turbo-16k")
+        llm = ChatOpenAI(temperature=0.0, model="gpt-3.5-turbo-16k")
         self.agent = CoMLAgent(llm)
 
     def _get_variable_context(self) -> dict[str, Any]:
         assert self.shell is not None
-        return {key: describe_variable(value) for key, value in filter_variables(self.shell.user_ns).items()}
+        return {
+            key: describe_variable(value)
+            for key, value in filter_variables(self.shell.user_ns).items()
+        }
 
     def _get_code_context(self) -> list[str]:
         assert self.shell is not None
         return get_ipython_history(self.shell)
 
-    def _post_generation(self, code: str, context: GenerateContext | FixContext) -> None:
+    def _post_generation(
+        self, code: str, context: GenerateContext | FixContext
+    ) -> None:
         def run_button_on_click(b):
             run_code_in_next_cell("%%comlrun\n" + code, context)
 
@@ -47,9 +64,15 @@ class CoMLMagics(Magics):
         def explain_button_on_click(b):
             run_code_in_next_cell("%%comlexplain\n" + code)
 
-        run_button = widgets.Button(description="👍 Run it!", layout=widgets.Layout(width="33%"))
-        edit_button = widgets.Button(description="🤔 Let me edit.", layout=widgets.Layout(width="33%"))
-        explain_button = widgets.Button(description="🧐 Explain it.", layout=widgets.Layout(width="33%"))
+        run_button = widgets.Button(
+            description="👍 Run it!", layout=widgets.Layout(width="33%")
+        )
+        edit_button = widgets.Button(
+            description="🤔 Let me edit.", layout=widgets.Layout(width="33%")
+        )
+        explain_button = widgets.Button(
+            description="🧐 Explain it.", layout=widgets.Layout(width="33%")
+        )
         run_button.on_click(run_button_on_click)
         edit_button.on_click(edit_button_on_click)
         explain_button.on_click(explain_button_on_click)
@@ -64,9 +87,7 @@ class CoMLMagics(Magics):
             codes=self._get_code_context(),
             request=None,
             first_attempt=source,
-            interactions=[
-                InteractionIncomplete(**kwargs)
-            ]
+            interactions=[InteractionIncomplete(**kwargs)],
         )
 
     @no_var_expand
@@ -76,9 +97,7 @@ class CoMLMagics(Magics):
         if cell is not None:
             request += "\n" + cell
         generate_context = self.agent.generate_code(
-            request.strip(),
-            self._get_variable_context(),
-            self._get_code_context()
+            request.strip(), self._get_variable_context(), self._get_code_context()
         )
         return self._post_generation(generate_context["answer"], generate_context)
 
@@ -92,7 +111,10 @@ class CoMLMagics(Magics):
         def run_button_on_click(b):
             run_code_in_next_cell(r"%coml " + b.description)
 
-        buttons = [widgets.Button(description=s, layout=widgets.Layout(width="100%")) for s in suggestions]
+        buttons = [
+            widgets.Button(description=s, layout=widgets.Layout(width="100%"))
+            for s in suggestions
+        ]
         for button in buttons:
             button.on_click(run_button_on_click)
         display(widgets.VBox(buttons))
@@ -125,14 +147,16 @@ class CoMLMagics(Magics):
                 first_attempt=target_cell["source"],
                 interactions=[
                     InteractionIncomplete(error=error, output=output, hint=hint)
-                ]
+                ],
             )
 
         fix_context = self.agent.fix_code(error, output, hint, context)
         if fix_context is None:
             return
         assert "code" in fix_context["interactions"][-1]
-        return self._post_generation(fix_context["interactions"][-1]["code"], fix_context)
+        return self._post_generation(
+            fix_context["interactions"][-1]["code"], fix_context
+        )
 
     @no_var_expand
     @cell_magic
@@ -153,6 +177,7 @@ class CoMLMagics(Magics):
             output = self.shell.run_cell(cell)
             return output.result
         finally:
+
             def like_button_on_click(b):
                 print("Thanks for your feedback! 🤗")
 
@@ -162,9 +187,16 @@ class CoMLMagics(Magics):
             def fix_with_comment_button_on_click(b):
                 insert_cell_below(r"%comlfix <describe the problem here>")
 
-            like_button = widgets.Button(description="🤗 Looks good!", layout=widgets.Layout(width="33%"))
-            retry_button = widgets.Button(description="🤬 Try again!", layout=widgets.Layout(width="33%"))
-            comment_button = widgets.Button(description="🤯 I'll show you what's wrong.", layout=widgets.Layout(width="33%"))
+            like_button = widgets.Button(
+                description="🤗 Looks good!", layout=widgets.Layout(width="33%")
+            )
+            retry_button = widgets.Button(
+                description="🤬 Try again!", layout=widgets.Layout(width="33%")
+            )
+            comment_button = widgets.Button(
+                description="🤯 I'll show you what's wrong.",
+                layout=widgets.Layout(width="33%"),
+            )
             like_button.on_click(like_button_on_click)
             retry_button.on_click(fix_button_on_click)
             comment_button.on_click(fix_with_comment_button_on_click)
