@@ -49,7 +49,7 @@ Issues = "https://github.com/microsoft/coml/issues"
 Source = "https://github.com/microsoft/coml"
 
 [project.scripts]
-coml = "coml.cli:main"
+coml-configagent = "coml.configagent.cli:main"
 
 [tool.hatch.version]
 source = "nodejs"
