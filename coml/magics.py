@@ -10,7 +10,7 @@ from IPython.core.magic import (
     magics_class,
     no_var_expand,
 )
-from IPython.display import Code, display
+from IPython.display import Code, HTML, display
 from langchain.chat_models import ChatOpenAI
 
 from .core import CoMLAgent
@@ -64,20 +64,27 @@ class CoMLMagics(Magics):
         def explain_button_on_click(b):
             run_code_in_next_cell("%%comlexplain\n" + code)
 
+        def verify_button_on_click(b):
+            run_code_in_next_cell("%%comlverify\n" + code)
+
         run_button = widgets.Button(
-            description="👍 Run it!", layout=widgets.Layout(width="33%")
+            description="👍 Run it!", layout=widgets.Layout(width="24.5%")
         )
         edit_button = widgets.Button(
-            description="🤔 Let me edit.", layout=widgets.Layout(width="33%")
+            description="🤔 Let me edit.", layout=widgets.Layout(width="24.5%")
         )
         explain_button = widgets.Button(
-            description="🧐 Explain it.", layout=widgets.Layout(width="33%")
+            description="🧐 Explain it.", layout=widgets.Layout(width="24.5%")
+        )
+        verify_button = widgets.Button(
+            description="🔍 Check yourself.", layout=widgets.Layout(width="24.5%")
         )
         run_button.on_click(run_button_on_click)
         edit_button.on_click(edit_button_on_click)
         explain_button.on_click(explain_button_on_click)
+        verify_button.on_click(verify_button_on_click)
 
-        combined = widgets.HBox([run_button, edit_button, explain_button])
+        combined = widgets.HBox([run_button, edit_button, explain_button, verify_button])
         display(Code(code, language="python"))
         display(combined)
 
@@ -165,6 +172,19 @@ class CoMLMagics(Magics):
             warnings.warn(r"The argument of %%comlexplain is ignored.")
         explanation = self.agent.explain(cell)
         display(Code(explanation, language="markdown"))
+
+    @no_var_expand
+    @cell_magic
+    def comlverify(self, line, cell):
+        if line:
+            warnings.warn(r"The argument of %%comlverify is ignored.")
+        from .linter import lint
+
+        result, messages = lint("\n".join(self._get_code_context()), cell)
+        display(HTML(f"""<details>
+  <summary>Pylint: {result}</summary>
+  {messages}
+</details>"""))
 
     @no_var_expand
     @cell_magic
