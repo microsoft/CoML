@@ -289,6 +289,19 @@ details :last-child {
 
     @no_var_expand
     @cell_magic
+    def comlverify(self, line, cell):
+        if line:
+            warnings.warn(r"The argument of %%comlverify is ignored.")
+        from .linter import lint
+
+        result, messages = lint("\n".join(self._get_code_context()), cell)
+        display(HTML(f"""<details>
+  <summary>Pylint: {result}</summary>
+  {messages}
+</details>"""))
+
+    @no_var_expand
+    @cell_magic
     def comlrun(self, line, cell):
         if line:
             warnings.warn(r"The argument of %comlrun is ignored.")
