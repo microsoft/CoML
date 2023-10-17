@@ -1,6 +1,6 @@
 {
   "name": "coml",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "JupyterLab extension for CoML.",
   "keywords": [
     "jupyter",

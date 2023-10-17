@@ -11,10 +11,10 @@ Highlight features:
 ## Installation
 
 ```bash
-pip install coml
+pip install mlcopilot
 ```
 
-CoML (formerly MLCopilot) assists users in generating practical ML solutions based on historical experiences, streamlining complex ML challenges. Users input specific ML tasks they want to solve, such as classifying emails as spam or not. The system provides suggested solutions, including recommended ML models, data processing methods, and explanations that are easy for humans to understand. [Paper](https://arxiv.org/abs/2304.14979)
+(We can't have the name `coml` on PyPI, so we use `mlcopilot` instead.)
 
 ## CoML in Jupyter Lab
 

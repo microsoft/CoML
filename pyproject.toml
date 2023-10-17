@@ -3,7 +3,7 @@ requires = ["hatchling>=1.5.0", "jupyterlab>=4.0.0,<5", "hatch-nodejs-version"]
 build-backend = "hatchling.build"
 
 [project]
-name = "coml"
+name = "mlcopilot"
 version = "0.0.1"
 dependencies = [
   "click",
