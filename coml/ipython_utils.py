@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import base64
 import json
 import re
@@ -80,6 +82,25 @@ def run_code_in_next_cell(python_code: str, metadata: Any = None) -> None:
         )
 
 
+def update_running_cell_metadata(metadata: Any) -> None:
+    if is_jupyter_lab_environ():
+        input(
+            json.dumps(
+                {"command": "update_running_cell_metadata", "metadata": metadata}
+            )
+        )
+    else:
+        encoded_metadata = base64.b64encode(json.dumps(metadata).encode()).decode()
+        display(
+            Javascript(
+                """
+            const cell = comlGetCurrentCell();
+            cell.metadata.coml = Object.assign(cell.metadata.coml || {}, JSON.parse(atob(\"""" + encoded_metadata + """\")));
+        """
+            )
+        )
+
+
 def get_ipython_history(ipython: InteractiveShell) -> list[str]:
     codes = []
     for code in ipython.user_ns["In"]:
@@ -96,6 +117,11 @@ def get_ipython_history(ipython: InteractiveShell) -> list[str]:
             continue
         codes.append(code)
     return codes
+
+
+def get_running_cell() -> dict[str, Any] | None:
+    """See `get_last_cell` for the output format."""
+    return json.loads(input(json.dumps({"command": "running_cell"})))
 
 
 def get_last_cell() -> dict[str, Any] | None:

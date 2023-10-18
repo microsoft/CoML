@@ -18,6 +18,7 @@ from .ipython_utils import (
     get_ipython_history,
     get_last_cell,
     insert_cell_below,
+    update_running_cell_metadata,
     parse_cell_outputs,
     run_code_in_next_cell,
 )
@@ -65,7 +66,7 @@ class CoMLMagics(Magics):
             run_code_in_next_cell("%%comlexplain\n" + code)
 
         def verify_button_on_click(b):
-            run_code_in_next_cell("%%comlverify\n" + code)
+            run_code_in_next_cell("%comlverify", context)
 
         run_button = widgets.Button(
             description="👍 Run it!", layout=widgets.Layout(width="24.5%")
@@ -83,6 +84,8 @@ class CoMLMagics(Magics):
         edit_button.on_click(edit_button_on_click)
         explain_button.on_click(explain_button_on_click)
         verify_button.on_click(verify_button_on_click)
+
+        update_running_cell_metadata(context)
 
         combined = widgets.HBox([run_button, edit_button, explain_button, verify_button])
         display(Code(code, language="python"))
@@ -174,16 +177,41 @@ class CoMLMagics(Magics):
         display(Code(explanation, language="markdown"))
 
     @no_var_expand
-    @cell_magic
-    def comlverify(self, line, cell):
-        if line:
-            warnings.warn(r"The argument of %%comlverify is ignored.")
+    @line_magic
+    def comlverify(self, line):
+        import markdown
         from .linter import lint
 
-        result, messages = lint("\n".join(self._get_code_context()), cell)
-        display(HTML(f"""<details>
-  <summary>Pylint: {result}</summary>
-  {messages}
+        target_cell = get_last_cell()
+        if target_cell is None:
+            raise RuntimeError("No cell to verify!")
+        if target_cell["cell_type"] != "code":
+            raise RuntimeError("Only code cells can be verified.")
+        if "coml" not in target_cell["metadata"]:
+            raise RuntimeError("This cell is not created by coml.")
+        
+        context = target_cell["metadata"]["coml"]
+        if context.get("interactions"):
+            code = context["interactions"][-1]["code"]
+        else:
+            code = context["answer"]
+
+        lint_result, lint_messages = lint("\n".join(self._get_code_context()), code)
+        rubberduck_result, rubberduck_messages = self.agent.check(code, context)
+
+        style = """<style>
+summary {
+  display: list-style;
+}
+</style>"""
+        display(HTML(f"""{style}
+<details>
+  <summary>Pylint: {lint_result}</summary>
+  {markdown.markdown(lint_messages, extensions=['nl2br'])}
+</details>
+<details>
+  <summary>Rubberduck: {rubberduck_result}</summary>
+  {markdown.markdown(rubberduck_messages, extensions=['nl2br'])}
 </details>"""))
 
     @no_var_expand

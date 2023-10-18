@@ -4,7 +4,7 @@ import json
 import re
 import types
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 
 
 class GenerateContextIncomplete(TypedDict):
@@ -176,7 +176,11 @@ def render_generate_context(
         code = "Executed code:\n\n" + render_ipython_cells(context["codes"]) + "\n"
     else:
         code = "No code has been executed yet.\n\n"
-    request = "Request:\n" + context["request"].rstrip()
+
+    if context["request"]:
+        request = "Request:\n" + context["request"].rstrip()
+    else:
+        request = "User request is unclear."
 
     if "answer" in context:
         answer = render_code(context["answer"])
@@ -269,6 +273,12 @@ def render_fix_context(context: FixContext) -> list[str]:
     return all_interactions
 
 
+def render_check_context(code: str, context: GenerateContext | FixContext) -> str:
+    result, _ = render_generate_context(cast(GenerateContextIncomplete, context))
+    result += f"\n\nGenerated code:\n\n```\n{code.rstrip()}\n```"
+    return result
+
+
 GENERATE_INSTRUCTION = f"""You're an assistant of a data scientist. You're good at writing Python code to do data analysis, visualization, and machine learning. The user is working in a IPython interactive notebook, and needs your help in solving a particular problem. The user will give you some context (e.g., variables available and already-executed code currently). Your goal is to write a new cell in the notebook that serves the user's request.
 
 Instructions:
@@ -293,6 +303,12 @@ The suggestions should be specific, actionable, yet concise.
 """
 
 EXPLAIN_INSTRUCTION = "You are a data scientist. Please generate a line-by-line explanation for the code given."
+
+CHECK_INSTRUCTION = """
+You are a data scientist. Please generate a line-by-line explanation for the code given.
+Then answer what is the purpose of the code, what is the code doing, and whether it satisfies user's intention.
+Finally, output a word "CORRECT" or "INCORRECT" in a single line to indicate whether the code is correct.
+""".strip()
 
 
 def cached_generate_fewshots() -> list[GenerateContext]:

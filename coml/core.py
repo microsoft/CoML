@@ -14,6 +14,7 @@ from .prompt_utils import (
     FIX_INSTRUCTION,
     GENERATE_INSTRUCTION,
     SUGGEST_INSTRUCTION,
+    CHECK_INSTRUCTION,
     FixContext,
     GenerateContext,
     GenerateContextIncomplete,
@@ -24,6 +25,7 @@ from .prompt_utils import (
     render_fix_context,
     render_generate_context,
     render_ipython_cells,
+    render_check_context,
 )
 
 
@@ -183,3 +185,18 @@ class CoMLAgent:
         response = self.llm(messages)
         debug_messages(response)
         return response.content
+
+    def check(self, code: str, context: GenerateContext | FixContext) -> tuple[bool, str]:
+        messages = [
+            SystemMessage(content=CHECK_INSTRUCTION),
+            HumanMessage(content=render_check_context(code, context)),
+        ]
+        debug_messages(*messages)
+        response = self.llm(messages)
+        debug_messages(response)
+        reason, last_line = response.content.rstrip().rsplit("\n", 1)
+        if "INCORRECT" in last_line.upper():
+            return False, reason
+        if "CORRECT" in last_line.upper():
+            return True, reason
+        raise ValueError("Unable to parse the response.")
