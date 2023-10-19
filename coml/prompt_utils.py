@@ -279,7 +279,12 @@ def render_check_context(code: str, context: GenerateContext | FixContext) -> st
     return result
 
 
-def render_sanity_check_context(code: str, context: GenerateContext | FixContext, error: str | None, output: str | None) -> str:
+def render_sanity_check_context(
+    code: str,
+    context: GenerateContext | FixContext,
+    error: str | None,
+    output: str | None,
+) -> str:
     result, _ = render_generate_context(cast(GenerateContextIncomplete, context))
     result += f"\n\nGenerated code:\n\n```\n{code.rstrip()}\n```"
     if output:

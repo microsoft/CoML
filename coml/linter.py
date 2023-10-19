@@ -26,7 +26,7 @@ def lint(previous_code: str, new_code: str) -> Tuple[LinterResult, str]:
         results = PylintRun(
             [f.name] + pylint_options,
             reporter=JSONReporter(reporter_buffer),
-            do_exit=False
+            do_exit=False,
         )
         # Score is here.
         # score = results.linter.stats.global_note

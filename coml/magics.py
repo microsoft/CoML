@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from typing import Any
 
@@ -11,7 +13,7 @@ from IPython.core.magic import (
     magics_class,
     no_var_expand,
 )
-from IPython.display import Code, HTML, display, clear_output
+from IPython.display import HTML, Code, clear_output, display
 from langchain.chat_models import ChatOpenAI
 
 from .core import CoMLAgent
@@ -19,9 +21,9 @@ from .ipython_utils import (
     get_ipython_history,
     get_last_cell,
     insert_cell_below,
-    update_running_cell_metadata,
     parse_cell_outputs,
     run_code_in_next_cell,
+    update_running_cell_metadata,
 )
 from .linter import lint
 from .prompt_utils import (
@@ -89,7 +91,9 @@ class CoMLMagics(Magics):
 
         update_running_cell_metadata({"action": "generate", **context})
 
-        combined = widgets.HBox([run_button, edit_button, explain_button, verify_button])
+        combined = widgets.HBox(
+            [run_button, edit_button, explain_button, verify_button]
+        )
         display(Code(code, language="python"))
         display(combined)
 
@@ -188,7 +192,7 @@ class CoMLMagics(Magics):
             raise RuntimeError("Only code cells can be verified.")
         if "coml" not in target_cell["metadata"]:
             raise RuntimeError("This cell is not created by coml.")
-        
+
         context = target_cell["metadata"]["coml"]
         if context.get("interactions"):
             code = context["interactions"][-1]["code"]
@@ -274,7 +278,9 @@ details :last-child {
         display_statuses(result)
 
         if error or output:
-            sanity_result, sanity_details = self.agent.output_sanity_check(code, context, error, output)
+            sanity_result, sanity_details = self.agent.output_sanity_check(
+                code, context, error, output
+            )
             result["sanity"] = {
                 "result": sanity_result,
                 "details": sanity_details,
@@ -323,5 +329,7 @@ details :last-child {
             comment_button.on_click(fix_with_comment_button_on_click)
             verify_button.on_click(verify_button_on_click)
 
-            combined = widgets.HBox([like_button, retry_button, comment_button, verify_button])
+            combined = widgets.HBox(
+                [like_button, retry_button, comment_button, verify_button]
+            )
             display(combined)

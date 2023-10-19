@@ -95,7 +95,9 @@ def update_running_cell_metadata(metadata: Any) -> None:
             Javascript(
                 """
             const cell = comlGetCurrentCell();
-            cell.metadata.coml = Object.assign(cell.metadata.coml || {}, JSON.parse(atob(\"""" + encoded_metadata + """\")));
+            cell.metadata.coml = Object.assign(cell.metadata.coml || {}, JSON.parse(atob(\""""
+                + encoded_metadata
+                + """\")));
         """
             )
         )

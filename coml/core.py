@@ -14,8 +14,8 @@ from .prompt_utils import (
     EXPLAIN_INSTRUCTION,
     FIX_INSTRUCTION,
     GENERATE_INSTRUCTION,
-    SUGGEST_INSTRUCTION,
     SANITY_CHECK_INSTRUCTION,
+    SUGGEST_INSTRUCTION,
     FixContext,
     GenerateContext,
     GenerateContextIncomplete,
@@ -23,10 +23,10 @@ from .prompt_utils import (
     InteractionIncomplete,
     cached_fix_fewshots,
     cached_generate_fewshots,
+    render_check_context,
     render_fix_context,
     render_generate_context,
     render_ipython_cells,
-    render_check_context,
     render_sanity_check_context,
 )
 
@@ -188,7 +188,9 @@ class CoMLAgent:
         debug_messages(response)
         return response.content
 
-    def static_check(self, code: str, context: GenerateContext | FixContext) -> tuple[bool, str]:
+    def static_check(
+        self, code: str, context: GenerateContext | FixContext
+    ) -> tuple[bool, str]:
         # Check the quality of code by looking at it (i.e., rubberduck)
         messages = [
             SystemMessage(content=CHECK_INSTRUCTION),
@@ -209,12 +211,14 @@ class CoMLAgent:
         code: str,
         context: GenerateContext | FixContext,
         error: str | None,
-        output: str | None
+        output: str | None,
     ) -> tuple[bool, str]:
         # Run a sanity check of the output of the code
         messages = [
             SystemMessage(content=SANITY_CHECK_INSTRUCTION),
-            HumanMessage(content=render_sanity_check_context(code, context, error, output)),
+            HumanMessage(
+                content=render_sanity_check_context(code, context, error, output)
+            ),
         ]
         debug_messages(*messages)
         response = self.llm(messages)
