@@ -127,7 +127,7 @@ To uninstall, you can run the following commands:
 jupyter server extension disable coml
 
 # Uninstall the Python package
-pip uninstall coml
+pip uninstall mlcopilot
 ```
 
 In development mode, you will also need to remove the symlink created by `jupyter labextension develop` command.

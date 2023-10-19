@@ -22,6 +22,9 @@ dependencies = [
   "typing_extensions",
   "ipython",
   "ipywidgets",
+  "ipylab",
+  "pylint",
+  "markdown",
 ]
 description = 'Assistant for data scientists and machine learning developers.'
 readme = "README.md"
@@ -106,7 +109,7 @@ before-build-python = ["jlpm clean:all"]
 line-length = 88
 target-version = ['py310']
 include = '\.pyi?$'
-packages = ["autogpt"]
+packages = ["coml"]
 extend-exclude = '.+/(dist|.venv|venv|build)/.+'
 
 [tool.isort]

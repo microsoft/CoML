@@ -96,7 +96,7 @@ function insertCellBelow(
   }
 }
 
-function getLastCell(notebook: Notebook, currentCellIndex: number): any {
+function getLastCell(notebook: Notebook, currentCellIndex: number) {
   if (currentCellIndex <= 0) {
     console.warn(
       `Current cell index is ${currentCellIndex}. No last cell found.`
@@ -104,7 +104,17 @@ function getLastCell(notebook: Notebook, currentCellIndex: number): any {
     return null;
   } else {
     const lastCell = notebook.widgets[currentCellIndex - 1];
-    return lastCell.model.toJSON();
+    return lastCell.model;
+  }
+}
+
+function getCurrentCell(notebook: Notebook, currentCellIndex: number) {
+  if (currentCellIndex < 0) {
+    console.warn(`Invalid current cell index: ${currentCellIndex}.`);
+    return null;
+  } else {
+    const lastCell = notebook.widgets[currentCellIndex];
+    return lastCell.model;
   }
 }
 
@@ -117,6 +127,99 @@ const plugin: JupyterFrontEndPlugin<void> = {
     app: JupyterFrontEnd,
     notebookTracker: INotebookTracker | null
   ) => {
+    function handleCommand(
+      outputArea: OutputArea,
+      command: any,
+      sendCallback: (msg: string) => void
+    ): any {
+      if (command['command'] === 'insert_cell_below') {
+        // Command format: { "command": "insert_cell_below", "code": "print('hello')", "metadata": { "request": ... } }
+        const notebook = getNotebook(app, notebookTracker);
+        if (notebook) {
+          const insertIndex = findCellByOutputArea(notebook, outputArea);
+          insertCellBelow(
+            notebook,
+            insertIndex,
+            command['code'],
+            command['metadata']
+          );
+        } else {
+          console.warn('No notebook found');
+        }
+        // Reply with empty string to indicate that the command is handled.
+        return '';
+      } else if (command['command'] === 'insert_and_execute_cell_below') {
+        // Command format: { "command": "insert_and_execute_cell_below", "code": "print('hello')", "metadata": { "request": ... } }
+        const notebook = getNotebook(app, notebookTracker);
+        const sessionContext = getNotebookContext(app, notebookTracker);
+        if (notebook && sessionContext) {
+          const insertIndex = findCellByOutputArea(notebook, outputArea);
+          insertCellBelow(
+            notebook,
+            insertIndex,
+            command['code'],
+            command['metadata'],
+            false
+          );
+          // Reply must be sent before running the next cell to avoid the deadlock warning.
+          sendCallback('');
+          // Run active cell
+          NotebookActions.run(notebook, sessionContext);
+        } else {
+          console.warn('No notebook or session context found');
+          // Reply with empty string to indicate that the command is handled.
+          return '';
+        }
+      } else if (command['command'] === 'last_cell') {
+        // Command format: { "command": "last_cell" }
+        const notebook = getNotebook(app, notebookTracker);
+        if (notebook) {
+          const currentCellIndex = findCellByOutputArea(notebook, outputArea);
+          const lastCell = getLastCell(notebook, currentCellIndex);
+          if (lastCell) {
+            return JSON.stringify(lastCell.toJSON());
+          } else {
+            console.warn('No last cell found');
+          }
+        } else {
+          console.warn('No notebook found');
+        }
+      } else if (command['command'] === 'running_cell') {
+        // Command format: { "command": "running_cell" }
+        const notebook = getNotebook(app, notebookTracker);
+        if (notebook) {
+          const currentCellIndex = findCellByOutputArea(notebook, outputArea);
+          const cell = getCurrentCell(notebook, currentCellIndex);
+          if (cell) {
+            return JSON.stringify(cell.toJSON());
+          } else {
+            console.warn('No running cell is found');
+          }
+        } else {
+          console.warn('No notebook found');
+        }
+      } else if (command['command'] === 'update_running_cell_metadata') {
+        // Command format: { "command": "update_running_cell_metadata", "metadata": ... }
+        const notebook = getNotebook(app, notebookTracker);
+        if (notebook) {
+          const currentCellIndex = findCellByOutputArea(notebook, outputArea);
+          const cell = getCurrentCell(notebook, currentCellIndex);
+          if (cell) {
+            cell.setMetadata('coml', command['metadata']);
+            return '';
+          } else {
+            console.warn('No running cell is found');
+          }
+        } else {
+          console.warn('No notebook found');
+        }
+      } else {
+        console.warn('Invalid command:', command);
+        return undefined;
+      }
+      return '';
+    }
+
     function hackedOnInputRequest(
       this: OutputArea,
       msg: KernelMessage.IInputRequestMsg,
@@ -124,63 +227,26 @@ const plugin: JupyterFrontEndPlugin<void> = {
     ): void {
       // This is the hacked version of handler of `input()` (at kernel side).
       // Everything needs to be done at JS side is firstly sent here and routed within this method.
+
+      let sent = false;
+      function sendCallback(reply: string) {
+        if (sent) {
+          console.warn('Reply already sent.');
+        } else {
+          future.sendInputReply({ status: 'ok', value: reply }, msg.header);
+          sent = true;
+        }
+      }
+
       try {
         // only apply the hack if the command is valid JSON
         const command = JSON.parse(msg.content.prompt);
-        if (command['command'] === 'insert_cell_below') {
-          // Command format: { "command": "insert_cell_below", "code": "print('hello')", "metadata": { "request": ... } }
-          const notebook = getNotebook(app, notebookTracker);
-          if (notebook) {
-            const insertIndex = findCellByOutputArea(notebook, this);
-            insertCellBelow(
-              notebook,
-              insertIndex,
-              command['code'],
-              command['metadata']
-            );
-          } else {
-            console.warn('No notebook found');
+        const result = handleCommand(this, command, sendCallback);
+        if (result !== undefined) {
+          if (!sent) {
+            sendCallback(result);
           }
-          // Reply with empty string to indicate that the command is handled.
-          future.sendInputReply({ status: 'ok', value: '' }, msg.header);
-        } else if (command['command'] === 'insert_and_execute_cell_below') {
-          // Command format: { "command": "insert_and_execute_cell_below", "code": "print('hello')", "metadata": { "request": ... } }
-          const notebook = getNotebook(app, notebookTracker);
-          const sessionContext = getNotebookContext(app, notebookTracker);
-          if (notebook && sessionContext) {
-            const insertIndex = findCellByOutputArea(notebook, this);
-            insertCellBelow(
-              notebook,
-              insertIndex,
-              command['code'],
-              command['metadata'],
-              false
-            );
-            // Reply must be sent before running the next cell to avoid the deadlock warning.
-            future.sendInputReply({ status: 'ok', value: '' }, msg.header);
-            // Run active cell
-            NotebookActions.run(notebook, sessionContext);
-          } else {
-            console.warn('No notebook or session context found');
-            // Reply with empty string to indicate that the command is handled.
-            future.sendInputReply({ status: 'ok', value: '' }, msg.header);
-          }
-        } else if (command['command'] === 'last_cell') {
-          // Command format: { "command": "last_cell" }
-          const notebook = getNotebook(app, notebookTracker);
-          if (notebook) {
-            const currentCellIndex = findCellByOutputArea(notebook, this);
-            const lastCell = getLastCell(notebook, currentCellIndex);
-            future.sendInputReply(
-              { status: 'ok', value: JSON.stringify(lastCell) },
-              msg.header
-            );
-          } else {
-            console.warn('No notebook found');
-          }
-          future.sendInputReply({ status: 'ok', value: 'hello' }, msg.header);
         } else {
-          console.warn('Not a command', msg);
           return (this as any).nativeOnInputRequest(msg, future);
         }
       } catch (err) {
