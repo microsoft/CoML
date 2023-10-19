@@ -17,6 +17,8 @@ def load_ipython_extension(ipython):
 
     ipython.register_magics(CoMLMagics)
 
+    print(f"CoML {__version__} loaded.")
+
 
 def _jupyter_labextension_paths():
     return [{"src": "labextension", "dest": "coml"}]

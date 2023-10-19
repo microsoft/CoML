@@ -28,7 +28,7 @@ window.comlGetLastCell = function () {
     return IPython.notebook.get_cell(comlGetRunningCellIndex() - 1);
 }
 
-if (IPython && IPython.CodeCell) {
+if (window.IPython && IPython.CodeCell) {
     window.IPythonAvailable = true;
     IPython.CodeCell.prototype.native_handle_input_request = IPython.CodeCell.prototype.native_handle_input_request || IPython.CodeCell.prototype._handle_input_request;
     IPython.CodeCell.prototype._handle_input_request = function (msg) {
