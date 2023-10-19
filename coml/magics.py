@@ -203,6 +203,9 @@ class CoMLMagics(Magics):
 summary {
   display: list-style;
 }
+details :last-child {
+  margin-bottom: 1em;
+}
 </style>"""
         display(HTML(f"""{style}
 <details>
