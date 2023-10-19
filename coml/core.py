@@ -10,11 +10,12 @@ from langchain.chat_models.base import BaseChatModel
 from langchain.schema import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
 from .prompt_utils import (
+    CHECK_INSTRUCTION,
     EXPLAIN_INSTRUCTION,
     FIX_INSTRUCTION,
     GENERATE_INSTRUCTION,
     SUGGEST_INSTRUCTION,
-    CHECK_INSTRUCTION,
+    SANITY_CHECK_INSTRUCTION,
     FixContext,
     GenerateContext,
     GenerateContextIncomplete,
@@ -26,6 +27,7 @@ from .prompt_utils import (
     render_generate_context,
     render_ipython_cells,
     render_check_context,
+    render_sanity_check_context,
 )
 
 
@@ -186,10 +188,33 @@ class CoMLAgent:
         debug_messages(response)
         return response.content
 
-    def check(self, code: str, context: GenerateContext | FixContext) -> tuple[bool, str]:
+    def static_check(self, code: str, context: GenerateContext | FixContext) -> tuple[bool, str]:
+        # Check the quality of code by looking at it (i.e., rubberduck)
         messages = [
             SystemMessage(content=CHECK_INSTRUCTION),
             HumanMessage(content=render_check_context(code, context)),
+        ]
+        debug_messages(*messages)
+        response = self.llm(messages)
+        debug_messages(response)
+        reason, last_line = response.content.rstrip().rsplit("\n", 1)
+        if "INCORRECT" in last_line.upper():
+            return False, reason
+        if "CORRECT" in last_line.upper():
+            return True, reason
+        raise ValueError("Unable to parse the response.")
+
+    def output_sanity_check(
+        self,
+        code: str,
+        context: GenerateContext | FixContext,
+        error: str | None,
+        output: str | None
+    ) -> tuple[bool, str]:
+        # Run a sanity check of the output of the code
+        messages = [
+            SystemMessage(content=SANITY_CHECK_INSTRUCTION),
+            HumanMessage(content=render_sanity_check_context(code, context, error, output)),
         ]
         debug_messages(*messages)
         response = self.llm(messages)

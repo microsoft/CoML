@@ -279,6 +279,18 @@ def render_check_context(code: str, context: GenerateContext | FixContext) -> st
     return result
 
 
+def render_sanity_check_context(code: str, context: GenerateContext | FixContext, error: str | None, output: str | None) -> str:
+    result, _ = render_generate_context(cast(GenerateContextIncomplete, context))
+    result += f"\n\nGenerated code:\n\n```\n{code.rstrip()}\n```"
+    if output:
+        result += f"\n\nOutput of the code:\n\n```\n{output.rstrip()}\n```"
+    else:
+        result += "\n\nNo output."
+    if error:
+        result += f"\n\nError message:\n\n```\n{error.rstrip()}\n```"
+    return result
+
+
 GENERATE_INSTRUCTION = f"""You're an assistant of a data scientist. You're good at writing Python code to do data analysis, visualization, and machine learning. The user is working in a IPython interactive notebook, and needs your help in solving a particular problem. The user will give you some context (e.g., variables available and already-executed code currently). Your goal is to write a new cell in the notebook that serves the user's request.
 
 Instructions:
@@ -309,6 +321,13 @@ You are a data scientist. Please generate a line-by-line explanation for the cod
 Then answer what is the purpose of the code, what is the code doing, and whether it satisfies user's intention.
 Finally, output a word "CORRECT" or "INCORRECT" in a single line to indicate whether the code is correct.
 """.strip()
+
+SANITY_CHECK_INSTRUCTION = """
+You are a data scientist. You've written some code to solve a certain problem.
+The code has produced some output (and optionally some error messages). You want to check whether the output is correct.
+Please take a look at the output, and print a word "CORRECT" or "INCORRECT" in a single line to indicate whether the output is correct.
+Derive the answer step by step.
+"""
 
 
 def cached_generate_fewshots() -> list[GenerateContext]:

@@ -6,14 +6,15 @@ from typing import Literal, Tuple
 from pylint.lint import Run as PylintRun
 from pylint.reporters import JSONReporter
 
-LinterResult = Literal["error", "warning", "information", "ok"]
+LinterResult = Literal["error", "warning", "info", "ok"]
 
 
 def lint(previous_code: str, new_code: str) -> Tuple[LinterResult, str]:
     # https://stackoverflow.com/q/75507725/6837658
     pylint_options = [
-        "--disable=C0103",
-        "--disable=C0114",
+        "--disable=C0103",  # Invalid name
+        "--disable=C0114",  # Missing module docstring
+        "--disable=C0304",  # Final new line missing
     ]
     previous_lines = previous_code.count("\n") + 1
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py") as f:
@@ -43,6 +44,6 @@ def lint(previous_code: str, new_code: str) -> Tuple[LinterResult, str]:
         elif any(e["type"] == "warning" for e in file_results):
             return "warning", details_joined
         elif file_results:
-            return "information", details_joined
+            return "info", details_joined
         else:
             return "ok", "No issues found."

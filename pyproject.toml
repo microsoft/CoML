@@ -23,6 +23,8 @@ dependencies = [
   "ipython",
   "ipywidgets",
   "ipylab",
+  "pylint",
+  "python-markdown",
 ]
 description = 'Assistant for data scientists and machine learning developers.'
 readme = "README.md"
