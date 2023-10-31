@@ -25,7 +25,6 @@ from .ipython_utils import (
     run_code_in_next_cell,
     update_running_cell_metadata,
 )
-from .linter import lint
 from .prompt_utils import (
     FixContext,
     GenerateContext,
@@ -200,9 +199,17 @@ class CoMLMagics(Magics):
             code = context["answer"]
 
         error = output = None
+        generated_vis = False
         if context.get("action") == "run":
             error, output = parse_cell_outputs(target_cell["outputs"])
-
+            generated_vis = (
+                output
+                and "<image/svg+xml>" in output
+                and "request" in context
+                and "answer" in context
+                and "codes" in context
+                and "variables" in context
+            )
         style = """<style>
 summary {
   display: list-style;
@@ -240,8 +247,11 @@ details :last-child {
                 "lint": "PyLint",
                 "rubberduck": "Rubberduck",
             }
-            if error or output:
+            if generated_vis:
+                display_names["vis"] = "Visualization check"
+            elif error or output:
                 display_names["sanity"] = "Output sanity check"
+
             status_icon = {
                 "error": "❌",
                 "warning": "⚠️",
@@ -258,16 +268,12 @@ details :last-child {
                         statuses[name]["details"], extensions=["nl2br"]
                     )
                 html += f"""<details>
-  <summary><b>{display_names[name]}:</b> {loading if name not in statuses else status_icon[statuses[name]["result"]]}</summary>
-  {detail_message}
+<summary><b>{display_names[name]}:</b> {loading if name not in statuses else status_icon[statuses[name]["result"]]}</summary>
+{detail_message}
 </details>\n"""
             display(HTML(html))
 
         result = {}
-        display_statuses(result)
-
-        lint_result, lint_details = lint("\n".join(self._get_code_context()), code)
-        result["lint"] = {"result": lint_result, "details": lint_details}
         display_statuses(result)
 
         rubberduck_result, rubberduck_details = self.agent.static_check(code, context)
@@ -277,7 +283,32 @@ details :last-child {
         }
         display_statuses(result)
 
-        if error or output:
+        if generated_vis:
+            # verify generated vis
+            svg_string = output.replace("<image/svg+xml>", "")
+            request = context["request"]
+            new_code = context["answer"]
+            previous_code = "\n".join(context["codes"])
+            variables = context["variables"]
+
+            # Roughly judge the source of the visualization
+            if "plt.show()" in new_code:
+                source = "matplotlib"
+                (
+                    visualization_check_result,
+                    visualization_check_details,
+                ) = self.agent.visualization_check(
+                    request, previous_code, svg_string, variables, source
+                )
+                details = ""
+                for detail in visualization_check_details:
+                    details += ("✅" if detail[0] else "❌") + " " + detail[1] + "\n"
+                result["vis"] = {
+                    "result": visualization_check_result,
+                    "details": details,
+                }
+                display_statuses(result)
+        elif error or output:
             sanity_result, sanity_details = self.agent.output_sanity_check(
                 code, context, error, output
             )
@@ -289,58 +320,23 @@ details :last-child {
 
     @no_var_expand
     @cell_magic
-    def comlverify(self, line, cell):
-        if line:
-            warnings.warn(r"The argument of %%comlverify is ignored.")
-        from .linter import lint
-
-        result, messages = lint("\n".join(self._get_code_context()), cell)
-        display(HTML(f"""<details>
-  <summary>Pylint: {result}</summary>
-  {messages}
-</details>"""))
-
-    @no_var_expand
-    @line_magic
-    def comlvisverify(self, line):
-        target_cell = get_last_cell()
-        # print("---vis verift---", target_cell['metadata']['coml'])
-        if target_cell is None or 'metadata' not in target_cell or 'coml' not in target_cell['metadata'] or 'request' not in target_cell['metadata']['coml'] or 'answer' not in target_cell['metadata']['coml'] or 'codes' not in target_cell['metadata']['coml'] or 'variables' not in target_cell['metadata']['coml']:
-            warnings.warn("No auto generated vis to verify!")
-            return
-        request = target_cell['metadata']['coml']['request']
-        new_code = target_cell['metadata']['coml']['answer']
-        previous_code = '\n'.join(target_cell['metadata']['coml']['codes'])
-        variables = target_cell['metadata']['coml']['variables']
-        # request = "Show the production budget of the movie that has the highest Worldwide Gross in each major genre using a horizontal bar chart."
-        # new_code = "# Group the dataset by major genre and find the movie with the highest worldwide gross in each genre\nhighest_gross_by_genre = dataset.groupby('Major Genre')['Worldwide Gross'].idxmax()\n\n# Get the production budget of the movies with the highest worldwide gross in each genre\nproduction_budget = dataset.loc[highest_gross_by_genre, 'Production Budget']\n\n# Create a horizontal bar chart\nplt.barh(production_budget.index, production_budget)\n\n# Set the title and labels\nplt.xlabel('Production Budget')\nplt.ylabel('Major Genre')\nplt.title('Production Budget of Movies with Highest Worldwide Gross by Major Genre')\n\n# Show the plot\nplt.show()"
-        # previous_code = '\n'.join(["import pandas as pd\ndataset = pd.read_json('https://vega.github.io/vega-lite/data/movies.json')\n\ndataset.head()"])
-        
-        if 'outputs' not in target_cell or len(target_cell['outputs']) == 0 or 'data' not in target_cell['outputs'][0] or 'image/svg+xml' not in target_cell['outputs'][0]['data']:
-            warnings.warn("No vis to verify!")
-            return
-        svg_string = target_cell['outputs'][0]['data']['image/svg+xml']
-
-        # Roughly judge the source of the visualization
-        if 'plt.show()' in new_code:
-            source = 'matplotlib'
-            verfications = self.agent.verify(request, previous_code, svg_string, variables, source)
-            # print("verfications", verfications)
-
-    @no_var_expand
-    @cell_magic
     def comlrun(self, line, cell):
         if line:
             warnings.warn(r"The argument of %comlrun is ignored.")
         assert self.shell is not None
         output = None
-        is_vis = False
-        width = '33%'
         try:
-            if 'plt.show()' in cell:
-                is_vis = True
-                width = '24.5%'
-                cell = cell.replace("plt.show()", "from io import StringIO\n__cached_svg = StringIO()\nplt.savefig(__cached_svg, format=\'svg\')\nplt.close()\nfrom IPython.display import SVG, display\ndisplay(SVG(__cached_svg.getvalue()))")
+            # show as svg
+            if "plt.show()" in cell:
+                cell = cell.replace(
+                    "plt.show()",
+                    "show_svg(plt)",
+                )
+                import inspect
+
+                from .vis_utils import show_svg
+
+                self.shell.run_cell(inspect.getsource(show_svg))
             output = self.shell.run_cell(cell)
             return output.result
         finally:

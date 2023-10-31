@@ -196,4 +196,10 @@ def parse_cell_outputs(outputs: list[dict]) -> tuple[str | None, str | None]:
                 output += cell_out["data"]["text/plain"] + "\n"
             else:
                 output += list(cell_out["data"].values())[0] + "\n"
+        elif cell_out["output_type"] == "display_data" and cell_out["data"]:
+            if output is None:
+                output = ""
+            if "image/svg+xml" in cell_out["data"]:
+                output = "<image/svg+xml>"
+                output += cell_out["data"]["image/svg+xml"]
     return error, output

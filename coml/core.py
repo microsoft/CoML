@@ -29,8 +29,8 @@ from .prompt_utils import (
     render_ipython_cells,
     render_sanity_check_context,
 )
-
 from .vis_utils import VisVerifier
+
 
 def debug_messages(*messages: BaseMessage) -> None:
     for message in messages:
@@ -79,7 +79,6 @@ def parse_code(response: str) -> str:
 class CoMLAgent:
     def __init__(self, llm: BaseChatModel):
         self.llm = llm
-        self.vis_verifier = VisVerifier(llm, self)
 
     def _fix_context_from_any_context(
         self, context: GenerateContext | FixContext, **kwargs: Any
@@ -231,6 +230,24 @@ class CoMLAgent:
         if "CORRECT" in last_line.upper():
             return True, reason
         raise ValueError("Unable to parse the response.")
-    
-    def verify(self, request:str, previous_code:str, svg_string: str, variable_descriptions: dict[str, str],source):
-        return self.vis_verifier.verify(request, previous_code, svg_string, variable_descriptions,source)
+
+    def visualization_check(
+        self,
+        request: str,
+        previous_code: str,
+        svg_string: str,
+        variable_descriptions: dict[str, str],
+        source,
+    ) -> tuple[bool, list[tuple[bool, str]]]:
+        vis_verifier = VisVerifier(self.llm, self)
+        verifications = vis_verifier.verify(
+            request, previous_code, svg_string, variable_descriptions, source
+        )
+        pass_verify = all([verification["answer"] for verification in verifications])
+        reason = []
+        for verification in verifications:
+            answer = verification["answer"]
+            aspect = verification["aspect"].capitalize()
+            rationale = verification["rationale"]
+            reason.append((answer, aspect + ": " + rationale))
+        return pass_verify, reason
