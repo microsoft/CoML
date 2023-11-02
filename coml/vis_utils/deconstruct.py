@@ -867,7 +867,7 @@ def identify_mark_bars(rects, spec):
     return filtered_rects
 
 
-def identify_mark_lines(paths, spec):
+def identify_mark_lines(paths):
     filtered_paths = paths
     filtered_paths = list(filter(lambda path: "points" in path, filtered_paths))
     # points from left to right
@@ -947,7 +947,7 @@ def analysis_mark(nodes, spec):
 
                 spec["data"].append(item)
 
-    elif "rect" in nodes:
+    if ("rect" in nodes) and ("mark" not in spec):
         rects = nodes["rect"]
         # bar chart
         bars = identify_mark_bars(rects, spec)
@@ -985,7 +985,7 @@ def analysis_mark(nodes, spec):
                     if encoding[channel]["type"] == "nominal":
                         if channel == "x" or channel == "y":
                             # todo: Get index in order
-                            if len(data_range) == 0 and len(data_domain) == len(bars):
+                            if len(data_range) == 0 and len(bars) == len(data_domain):
                                 index = bars.index(bar)
                             else:
                                 index = get_aligned_index(bar, channel, data_range)
@@ -1015,7 +1015,42 @@ def analysis_mark(nodes, spec):
                             item[encoding[channel]["field"]] = data_range[0]
                 spec["data"].append(item)
 
-    elif "path" or "line" in nodes:
+    if ("circle" in nodes) and ("mark" not in spec):
+        circles = nodes["circle"]
+        # scatter plot
+        circles = identify_mark_circles(circles, spec)
+        if len(circles) > 0:
+            spec["mark"] = "circle"
+            if len(encoding.keys()) > 2:
+                spec["chart"] = "grouping scatter"
+            else:
+                spec["chart"] = "scatter"
+            spec["data"] = []
+            for circle in circles:
+                circle["type"] = "mark"
+                item = {}
+                for channel in encoding:
+                    data_range = encoding[channel]["scale"]["range"]
+                    data_domain = encoding[channel]["scale"]["domain"]
+                    if encoding[channel]["type"] == "nominal":
+                        index = data_range.index(circle[channel])
+                        item[encoding[channel]["field"]] = data_domain[index]
+                    elif encoding[channel]["type"] == "quantitative":
+                        actual_channel = channel
+                        if channel == "y":
+                            actual_channel = "cy"
+                        elif channel == "x":
+                            actual_channel = "cx"
+                        item[encoding[channel]["field"]] = round(
+                            data_domain[0]
+                            + (data_domain[1] - data_domain[0])
+                            / (data_range[1] - data_range[0])
+                            * (circle[actual_channel] - data_range[0]),
+                            6,
+                        )
+                spec["data"].append(item)
+
+    if ("path" or "line" in nodes) and ("mark" not in spec):
         lines = []
         if "path" in nodes:
             paths = nodes["path"]
@@ -1090,41 +1125,6 @@ def analysis_mark(nodes, spec):
                                 item1[encoding[channel]["field"]]
                             ).strftime(date_format)
                     spec["data"].append(item1)
-
-    elif "circle" in nodes:
-        circles = nodes["circle"]
-        # scatter plot
-        circles = identify_mark_circles(circles, spec)
-        if len(circles) > 0:
-            spec["mark"] = "circle"
-            if len(encoding.keys()) > 2:
-                spec["chart"] = "grouping scatter"
-            else:
-                spec["chart"] = "scatter"
-            spec["data"] = []
-            for circle in circles:
-                circle["type"] = "mark"
-                item = {}
-                for channel in encoding:
-                    data_range = encoding[channel]["scale"]["range"]
-                    data_domain = encoding[channel]["scale"]["domain"]
-                    if encoding[channel]["type"] == "nominal":
-                        index = data_range.index(circle[channel])
-                        item[encoding[channel]["field"]] = data_domain[index]
-                    elif encoding[channel]["type"] == "quantitative":
-                        actual_channel = channel
-                        if channel == "y":
-                            actual_channel = "cy"
-                        elif channel == "x":
-                            actual_channel = "cx"
-                        item[encoding[channel]["field"]] = round(
-                            data_domain[0]
-                            + (data_domain[1] - data_domain[0])
-                            / (data_range[1] - data_range[0])
-                            * (circle[actual_channel] - data_range[0]),
-                            6,
-                        )
-                spec["data"].append(item)
 
     if "text" in nodes:
         if len(nodes["text"]) == 1:

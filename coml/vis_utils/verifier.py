@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import json
-import numbers
 import random
 import re
 import sys
@@ -170,6 +171,172 @@ def answer_question(
 PRECISION = 0.0001
 
 
+def batch_check(
+    data: list[dict],
+    request: str,
+    chart_info: dict,
+    previous_code: str,
+    variable_descriptions: dict,
+    agent,
+) -> list[dict]:
+    # Analyze the channel
+    ground_truth = chart_info["data"]
+    encoding = chart_info["encoding"]
+    quantitative_channels = []
+    other_channels = []
+    for channel in chart_info["encoding"].keys():
+        if encoding[channel]["type"] == "quantitative":
+            quantitative_channels.append(channel)
+        else:
+            other_channels.append(channel)
+
+    # Choose a better way to query the data
+    if len(quantitative_channels) == 1:
+        # generate query, while only one quantitative channel
+        query = f"Then find {len(data)} values, "
+        items = []
+        for datum in data:
+            item = f'one for the {encoding[quantitative_channels[0]]["title"]} when '
+            conditions = [
+                f'the {encoding[channel]["title"]} is {datum[encoding[channel]["field"]]}'
+                for channel in other_channels
+            ]
+            item += " and ".join(conditions)
+            items.append(item)
+        query += ", ".join(items)
+        query += "."
+        value = {
+            "vis": [
+                datum[encoding[quantitative_channels[0]]["field"]] for datum in data
+            ],
+            "data": answer_question(
+                query, request, previous_code, variable_descriptions, agent
+            ),
+        }
+
+        if value["data"] is None or len(value["data"]) != len(value["vis"]):
+            return []
+        # compare data
+        verifications = []
+        for index in range(len(value["data"])):
+            try:
+                data_value = float(value["data"][index])
+                vis_value = value["vis"][index]
+                answer = bool(abs((data_value - vis_value) / data_value) < PRECISION)
+                verification = {
+                    "aspect": "data point",
+                    "answer": answer,
+                    "rationale": items[index].replace("one for the", "The")
+                    + f" is {data_value}.",
+                }
+                if answer is False:
+                    verification[
+                        "rationale"
+                    ] += f" But in the visualization, the value is {vis_value}."
+                verifications.append(verification)
+            except Exception:
+                pass
+        return verifications
+    elif len(quantitative_channels) == 2:
+        # generate query, while only two quantitative channel
+        query = f"Then find {len(data)} lists of values, "
+        items = []
+        value = {
+            "vis": [],
+        }
+        verifications = []
+        for datum in data:
+            data_value = datum[encoding[quantitative_channels[0]]["field"]]
+            item = f'a list of {encoding[quantitative_channels[1]]["title"]} when the {encoding[quantitative_channels[0]]["title"]} is between {data_value * (1-PRECISION)} and {data_value * (1+PRECISION)}'
+            filtered_data = ground_truth
+            if len(other_channels) > 0:
+                item += " when "
+                conditions = [
+                    f'the {encoding[channel]["title"]} is {datum[encoding[channel]["field"]]}'
+                    for channel in other_channels
+                ]
+                item += " and ".join(conditions)
+                filtered_data = [
+                    d
+                    for d in filtered_data
+                    if all(
+                        [
+                            d[encoding[channel]["field"]]
+                            == datum[encoding[channel]["field"]]
+                            for channel in other_channels
+                        ]
+                    )
+                ]
+            items.append(item)
+            value["vis"].append(
+                [
+                    d[encoding[quantitative_channels[1]]["field"]]
+                    for d in filtered_data
+                    if d[encoding[quantitative_channels[0]]["field"]]
+                    > data_value * (1 - PRECISION)
+                    and d[encoding[quantitative_channels[0]]["field"]]
+                    < data_value * (1 + PRECISION)
+                ]
+            )
+            verifications.append(
+                {
+                    "aspect": "data point",
+                    "rationale": item.replace("a list of", "All").replace(
+                        f"between {data_value * (1-PRECISION)} and {data_value * (1+PRECISION)}",
+                        f"around {data_value}",
+                    ),
+                }
+            )
+
+        query += ", ".join(items)
+        query += "."
+
+        value["data"] = answer_question(
+            query, request, previous_code, variable_descriptions, agent
+        )
+
+        if value["data"] is None or len(value["data"]) != len(value["vis"]):
+            return []
+        # compare data
+        for index in range(len(value["data"])):
+            try:
+                data_value = value["data"][index]
+                # filter nan
+                data_value = [d for d in data_value if not pd.isnull(d)]
+                data_value = [float(d) for d in data_value]
+                vis_value = value["vis"][index]
+                verifications[index][
+                    "rationale"
+                ] += f' are {", ".join([str(d) for d in data_value])}.'
+                answer = True
+                if len(data_value) == len(vis_value):
+                    data_value.sort()
+                    vis_value.sort()
+                    for index1 in range(len(data_value)):
+                        if (
+                            abs(
+                                (data_value[index1] - vis_value[index1])
+                                / data_value[index1]
+                            )
+                            > PRECISION
+                        ):
+                            answer = False
+                            break
+                else:
+                    answer = False
+
+                verifications[index]["answer"] = answer
+                if answer is False:
+                    verifications[index][
+                        "rationale"
+                    ] += f' But in the visualization, those are {", ".join([str(d) for d in vis_value])}.'
+            except Exception:
+                verifications[index] = None
+        verifications = [verification for verification in verifications if verification]
+        return verifications
+    return []
+
+
 def spot_check(
     datum: dict,
     request: str,
@@ -179,7 +346,7 @@ def spot_check(
     agent,
 ):
     # Analyze the channel
-    data = chart_info["data"]
+    ground_truth = chart_info["data"]
     encoding = chart_info["encoding"]
     quantitative_channels = []
     other_channels = []
@@ -215,12 +382,13 @@ def spot_check(
         try:
             value["data"] = float(value["data"])
         except Exception:
-            value["data"] = value["data"]
+            return None
 
         result = {
             "aspect": "data point",
-            "answer": isinstance((value["data"]), numbers.Number)
-            and (bool(abs((value["data"] - value["vis"]) / value["data"]) < PRECISION)),
+            "answer": (
+                bool(abs((value["data"] - value["vis"]) / value["data"]) < PRECISION)
+            ),
             "rationale": query.replace("Then find the", "The")[0:-1]
             + f' is {value["data"]}.',
         }
@@ -228,11 +396,12 @@ def spot_check(
             result[
                 "rationale"
             ] += f' But in the visualization, the value is {value["vis"]}.'
+        return result
     elif len(quantitative_channels) == 2:
         # generate query, while only two quantitative channel
         data_value = datum[encoding[quantitative_channels[0]]["field"]]
         query = f'Then find all {encoding[quantitative_channels[1]]["title"]} when the {encoding[quantitative_channels[0]]["title"]} is between {data_value * (1-PRECISION)} and {data_value * (1+PRECISION)}'
-        filtered_data = data
+        filtered_data = ground_truth
         if len(other_channels) > 0:
             query += " when "
             conditions = [
@@ -270,7 +439,10 @@ def spot_check(
             return None
         # filter nan
         value["data"] = [d for d in value["data"] if not pd.isnull(d)]
-
+        try:
+            value["data"] = [float(d) for d in value["data"]]
+        except Exception:
+            return None
         result = {
             "aspect": "data point",
             "answer": True,
@@ -278,15 +450,14 @@ def spot_check(
                 f"between {data_value * (1-PRECISION)} and {data_value * (1+PRECISION)}",
                 f"around {data_value}",
             )[0:-1]
-            + f' is {", ".join([str(d) for d in value["data"]])}.',
+            + f' are {", ".join([str(d) for d in value["data"]])}.',
         }
         if len(value["data"]) == len(value["vis"]):
             value["vis"].sort()
             value["data"].sort()
             for index in range(len(value["data"])):
                 if (
-                    not isinstance((value["data"][index]), numbers.Number)
-                    or abs(
+                    abs(
                         (value["data"][index] - value["vis"][index])
                         / value["data"][index]
                     )
@@ -300,9 +471,10 @@ def spot_check(
         if result["answer"] is False:
             result[
                 "rationale"
-            ] += f' But in the visualization, the value is {", ".join([str(d) for d in value["vis"]])}.'
+            ] += f' But in the visualization, those are {", ".join([str(d) for d in value["vis"]])}.'
+        return result
 
-    return result
+    return None
 
 
 def get_order(llm: BaseChatModel, request: str):
@@ -477,11 +649,10 @@ class VisVerifier:
         if source == "seaborn":
             # seaborn is based on matplotlib
             source = "matplotlib"
-
         try:
             # STEP 1: deconstruct svg
             chart_info = deconstruct(svg_string, source)
-            if chart_info is None:
+            if (chart_info is None) or ("data" not in chart_info):
                 self._add_verification(understand_fail_result)
             else:
                 # STEP2: check chart type, data encoding and title
@@ -539,22 +710,36 @@ class VisVerifier:
             # random pick NUM_SAMPLE data points
             indexes = range(len(data))
             sampled_indexes = random.sample(indexes, NUM_SAMPLE)
+            sampled_data = [data[i] for i in sampled_indexes]
+            # Try batch checking first because it's more time efficient。
+            verifications += batch_check(
+                sampled_data,
+                request,
+                chart_info,
+                previous_code,
+                variable_descriptions,
+                self.agent,
+            )
+            for verification in verifications:
+                self._add_verification(verification)
+            # if batch checking failed
+            if len(verifications) == 0:
+                for index in sampled_indexes:
+                    datum = data[index]
+                    verification = spot_check(
+                        datum,
+                        request,
+                        chart_info,
+                        previous_code,
+                        variable_descriptions,
+                        self.agent,
+                    )
+                    if verification:
+                        self._add_verification(verification)
+                        verifications.append(verification)
+                        if verification["answer"] is False:
+                            break
 
-            for index in sampled_indexes:
-                datum = data[index]
-                verification = spot_check(
-                    datum,
-                    request,
-                    chart_info,
-                    previous_code,
-                    variable_descriptions,
-                    self.agent,
-                )
-                if verification:
-                    self._add_verification(verification)
-                    verifications.append(verification)
-                    if verification["answer"] is False:
-                        break
             pass_verify = all(
                 [verification["answer"] for verification in verifications]
             )

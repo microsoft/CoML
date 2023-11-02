@@ -309,11 +309,7 @@ class CoMLMagics(Magics):
         display_statuses(result)
 
         if generated_vis:
-            # verify generated vis
-            svg_string = output.replace("<image/svg+xml>", "")
-            request = context["request"]
-            variables = context["variables"]
-
+            # verify generated visualization
             # Roughly judge the source of the visualization
             if "plt.show()" in code:
                 vis_framework = "matplotlib"
@@ -323,7 +319,7 @@ class CoMLMagics(Magics):
                 ) = self.agent.visualization_check(
                     context["request"],
                     "\n".join(self._get_code_context()),
-                    code,
+                    output.replace("<image/svg+xml>", ""),
                     context["variables"],
                     vis_framework,
                 )
