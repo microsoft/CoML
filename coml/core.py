@@ -31,8 +31,12 @@ from .prompt_utils import (
 )
 from .vis_utils import VisVerifier
 
+_debug_mode: bool = False
+
 
 def debug_messages(*messages: BaseMessage) -> None:
+    if not _debug_mode:
+        return
     for message in messages:
         if isinstance(message, SystemMessage):
             print(colorama.Fore.BLUE + message.content + colorama.Fore.RESET + "\n")
@@ -113,10 +117,10 @@ class CoMLAgent:
         )
         question, _ = render_generate_context(context)
         messages.append(HumanMessage(content=question))
-        # debug_messages(*messages)
+        debug_messages(*messages)
 
         response = self.llm(messages)
-        # debug_messages(response)
+        debug_messages(response)
         code = parse_code(response.content)
         return {**context, "answer": code}
 

@@ -25,6 +25,7 @@ from .ipython_utils import (
     run_code_in_next_cell,
     update_running_cell_metadata,
 )
+from .linter import lint
 from .prompt_utils import (
     FixContext,
     GenerateContext,
@@ -32,6 +33,38 @@ from .prompt_utils import (
     describe_variable,
     filter_variables,
 )
+
+VERIFY_STYLE = """
+<style>
+summary {
+  display: list-style;
+}
+details :last-child {
+  margin-bottom: 1em;
+}
+.loader {
+  width: 1em;
+  height: 1em;
+  border: 0.1em solid;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
+  margin-bottom: 0 !important;
+}
+
+@keyframes rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+</style>
+"""
 
 
 @magics_class
@@ -115,6 +148,22 @@ class CoMLMagics(Magics):
             request.strip(), self._get_variable_context(), self._get_code_context()
         )
         return self._post_generation(generate_context["answer"], generate_context)
+
+    @no_var_expand
+    @line_magic
+    def comlset(self, line):
+        key, value = line.lower().strip().split()
+        if key == "debug":
+            from . import core
+
+            if value == "on":
+                core._debug_mode = True
+            elif value == "off":
+                core._debug_mode = False
+            else:
+                raise ValueError("Debug mode must be either on or off.")
+        else:
+            raise ValueError("Unknown setting.")
 
     @no_var_expand
     @line_magic
@@ -202,47 +251,11 @@ class CoMLMagics(Magics):
         generated_vis = False
         if context.get("action") == "run":
             error, output = parse_cell_outputs(target_cell["outputs"])
-            generated_vis = (
-                output
-                and "<image/svg+xml>" in output
-                and "request" in context
-                and "answer" in context
-                and "codes" in context
-                and "variables" in context
-            )
-        style = """<style>
-summary {
-  display: list-style;
-}
-details :last-child {
-  margin-bottom: 1em;
-}
-.loader {
-  width: 1em;
-  height: 1em;
-  border: 0.1em solid;
-  border-bottom-color: transparent;
-  border-radius: 50%;
-  display: inline-block;
-  box-sizing: border-box;
-  animation: rotation 1s linear infinite;
-  margin-bottom: 0 !important;
-}
-
-@keyframes rotation {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-</style>"""
+            generated_vis = output and "<image/svg+xml>" in output
 
         def display_statuses(statuses):
             clear_output(wait=True)
-            html = style + "\n"
+            html = VERIFY_STYLE + "\n"
             display_names = {
                 "lint": "PyLint",
                 "rubberduck": "Rubberduck",
@@ -261,19 +274,31 @@ details :last-child {
                 False: "❌",
             }
             loading = "<span class='loader'></span>"
+            message_template = "<details><summary><b>{}:</b> {}</summary>\n{}</details>"
             for name in display_names:
                 detail_message = "Still loading..."
                 if name in statuses:
                     detail_message = markdown.markdown(
                         statuses[name]["details"], extensions=["nl2br"]
                     )
-                html += f"""<details>
-<summary><b>{display_names[name]}:</b> {loading if name not in statuses else status_icon[statuses[name]["result"]]}</summary>
-{detail_message}
-</details>\n"""
+                html += message_template.format(
+                    display_names[name],
+                    loading
+                    if name not in statuses
+                    else status_icon[statuses[name]["result"]],
+                    detail_message,
+                )
+
             display(HTML(html))
 
         result = {}
+        display_statuses(result)
+
+        lint_result, lint_details = lint("\n".join(self._get_code_context()), code)
+        result["lint"] = {
+            "result": lint_result,
+            "details": lint_details,
+        }
         display_statuses(result)
 
         rubberduck_result, rubberduck_details = self.agent.static_check(code, context)
@@ -287,18 +312,20 @@ details :last-child {
             # verify generated vis
             svg_string = output.replace("<image/svg+xml>", "")
             request = context["request"]
-            new_code = context["answer"]
-            previous_code = "\n".join(context["codes"])
             variables = context["variables"]
 
             # Roughly judge the source of the visualization
-            if "plt.show()" in new_code:
-                source = "matplotlib"
+            if "plt.show()" in code:
+                vis_framework = "matplotlib"
                 (
                     visualization_check_result,
                     visualization_check_details,
                 ) = self.agent.visualization_check(
-                    request, previous_code, svg_string, variables, source
+                    context["request"],
+                    "\n".join(self._get_code_context()),
+                    code,
+                    context["variables"],
+                    vis_framework,
                 )
                 details = ""
                 for detail in visualization_check_details:
@@ -308,6 +335,7 @@ details :last-child {
                     "details": details,
                 }
                 display_statuses(result)
+
         elif error or output:
             sanity_result, sanity_details = self.agent.output_sanity_check(
                 code, context, error, output
