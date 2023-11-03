@@ -3,6 +3,7 @@ import tempfile
 from io import StringIO
 from typing import Literal, Tuple
 
+import pylint
 from pylint.lint import Run as PylintRun
 from pylint.reporters import JSONReporter
 
@@ -23,11 +24,19 @@ def lint(previous_code: str, new_code: str) -> Tuple[LinterResult, str]:
         f.seek(0)
 
         reporter_buffer = StringIO()
-        results = PylintRun(
-            [f.name] + pylint_options,
-            reporter=JSONReporter(reporter_buffer),
-            do_exit=False,
-        )
+
+        if pylint.__version__ < "3":
+            results = PylintRun(
+                [f.name] + pylint_options,
+                reporter=JSONReporter(reporter_buffer),
+                do_exit=False,
+            )
+        else:
+            results = PylintRun(
+                [f.name] + pylint_options,
+                reporter=JSONReporter(reporter_buffer),
+                exit=False,
+            )
         # Score is here.
         # score = results.linter.stats.global_note
         file_results = json.loads(reporter_buffer.getvalue())
