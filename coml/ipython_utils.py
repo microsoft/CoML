@@ -11,7 +11,7 @@ from IPython.core.interactiveshell import InteractiveShell
 from IPython.display import display
 
 
-def is_jupyter_lab_environ() -> bool:    
+def is_jupyter_lab_environ() -> bool:
     if sys.platform == "win32":
         # FIXME: Assuming jupyter-lab on Windows
         return True
