@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import re
+import sys
 from typing import Any
 
 from IPython.core.display import Javascript
@@ -11,11 +12,15 @@ from IPython.display import display
 
 
 def is_jupyter_lab_environ() -> bool:
-    # https://stackoverflow.com/q/57173235/6837658
-    import psutil
+    if sys.platform == "win32":
+        # FIXME: Assuming jupyter-lab on Windows
+        return True
+    else:
+        # https://stackoverflow.com/q/57173235/6837658
+        import psutil
 
-    parent = psutil.Process().parent()
-    return "jupyter-lab" in parent.name()
+        parent = psutil.Process().parent()
+        return "jupyter-lab" in parent.name()
 
 
 def insert_cell_below(code: str, metadata: Any = None) -> None:
