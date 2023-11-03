@@ -39,7 +39,7 @@ Then we have provided several commands to assist your journey with interactive c
 
 **Limitations:**
 
-* Currently, CoML only supports Jupyter Lab and classical Jupyter notebook (nbclassic). We are still working on supports of newer Jupyter notebook, Jupyter-vscode and Google Colab.
+* Currently, CoML only supports Jupyter Lab and classical Jupyter notebook (nbclassic, and only on Linux platforms). We are still working on supports of newer Jupyter notebook, Jupyter-vscode and Google Colab.
 * CoML uses gpt-3.5-turbo-16k model in its implementation. There is no way to change the model for now. The cost of using this model is around $0.04 per request. Please be aware of this cost.
 
 ## CoML Config Agent
