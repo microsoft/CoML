@@ -329,7 +329,10 @@ def process_legend_matplotlib(spec):
     spec["type"] = "legend"
     labels = []
     examples = []
-    for i in range(1, len(spec["children"])):
+    # element(index 0) might be background
+    # todo: A more accurate way to recognize background
+    first = 0 if spec["children"][0]["tag"] == "text" else 1
+    for i in range(first, len(spec["children"])):
         child = spec["children"][i]
         if child["tag"] == "text":
             labels.append(child)
@@ -1054,7 +1057,7 @@ def analysis_mark(nodes, spec):
         lines = []
         if "path" in nodes:
             paths = nodes["path"]
-            lines += identify_mark_lines(paths, spec)
+            lines += identify_mark_lines(paths)
         if "line" in nodes:
             lines += nodes["line"]
             # line chart that only has two points
@@ -1213,26 +1216,51 @@ def deconstruct(svg, source="matplotlib"):
     # matplotlib parser
     defss = {}
     spec = parser_node(svg, None, defss, [0, 0], {}, source)
+    subplots = [
+        child
+        for child in spec["children"][0]["children"]
+        if ("type" in child and child["type"] == "subplot")
+    ]
+    if len(subplots) != 1:
+        return None
+    subplot = subplots[0]
 
-    for child in spec["children"][0]["children"]:
-        if "type" in child and child["type"] == "subplot":
-            child["encoding"] = {}
-            others = {}
-            for child2 in child["children"]:
-                if "type" in child2:
-                    if child2["type"] == "xaxis" or child2["type"] == "yaxis":
-                        analysis_axis(child2, child["encoding"])
-                    elif child2["type"] == "legend":
-                        analysis_legend(child2, child["encoding"])
+    # find legend
+    legends = [
+        child
+        for child in subplot["children"]
+        if ("type" in child and child["type"] == "legend")
+    ]
+    legend = None
+    if len(legends) > 1:
+        return None
+    elif len(legends) == 1:
+        legend = legends[0]
+    else:
+        # legend may out of subplot
+        legends = [
+            child
+            for child in spec["children"][0]["children"]
+            if ("type" in child and child["type"] == "legend")
+        ]
+        if len(legends) == 1:
+            legend = legends[0]
+
+    subplot["encoding"] = {}
+    if legend is not None:
+        analysis_legend(legend, subplot["encoding"])
+    others = {}
+    for child in subplot["children"]:
+        if "type" in child:
+            if child["type"] == "xaxis" or child["type"] == "yaxis":
+                analysis_axis(child, subplot["encoding"])
+        else:
+            nodes = get_leaf_nodes(child)
+            for node in nodes:
+                if node["tag"] not in others:
+                    others[node["tag"]] = [node]
                 else:
-                    nodes = get_leaf_nodes(child2)
-                    for node in nodes:
-                        if node["tag"] not in others:
-                            others[node["tag"]] = [node]
-                        else:
-                            others[node["tag"]].append(node)
-            analysis_scale(child)
-            analysis_mark(others, child)
-            return child
-
-    return None
+                    others[node["tag"]].append(node)
+    analysis_scale(subplot)
+    analysis_mark(others, subplot)
+    return subplot

@@ -247,7 +247,15 @@ class CoMLAgent:
         verifications = vis_verifier.verify(
             request, previous_code, svg_string, variable_descriptions, source
         )
-        pass_verify = all([verification["answer"] for verification in verifications])
+
+        answers = [verification["answer"] for verification in verifications]
+        if False in answers:
+            pass_verify = False
+        elif "unknown" in answers:
+            pass_verify = "unknown"
+        else:
+            pass_verify = True
+
         reason = []
         for verification in verifications:
             answer = verification["answer"]

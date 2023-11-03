@@ -253,8 +253,18 @@ class CoMLMagics(Magics):
             error, output = parse_cell_outputs(target_cell["outputs"])
             generated_vis = output and "<image/svg+xml>" in output
 
+        status_icon = {
+            "error": "❌",
+            "warning": "⚠️",
+            "info": "ℹ️",
+            "ok": "✅",
+            "unknown": "❔",
+            True: "✅",
+            False: "❌",
+        }
+
         def display_statuses(statuses):
-            clear_output(wait=True)
+            # clear_output(wait=True)
             html = VERIFY_STYLE + "\n"
             display_names = {
                 "lint": "PyLint",
@@ -265,14 +275,6 @@ class CoMLMagics(Magics):
             elif error or output:
                 display_names["sanity"] = "Output sanity check"
 
-            status_icon = {
-                "error": "❌",
-                "warning": "⚠️",
-                "info": "ℹ️",
-                "ok": "✅",
-                True: "✅",
-                False: "❌",
-            }
             loading = "<span class='loader'></span>"
             message_template = "<details><summary><b>{}:</b> {}</summary>\n{}</details>"
             for name in display_names:
@@ -318,14 +320,14 @@ class CoMLMagics(Magics):
                     visualization_check_details,
                 ) = self.agent.visualization_check(
                     context["request"],
-                    "\n".join(self._get_code_context()),
+                    "\n".join(context["codes"]),
                     output.replace("<image/svg+xml>", ""),
                     context["variables"],
                     vis_framework,
                 )
                 details = ""
                 for detail in visualization_check_details:
-                    details += ("✅" if detail[0] else "❌") + " " + detail[1] + "\n"
+                    details += status_icon[detail[0]] + " " + detail[1] + "\n"
                 result["vis"] = {
                     "result": visualization_check_result,
                     "details": details,
