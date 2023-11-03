@@ -113,10 +113,10 @@ def get_ipython_history(ipython: InteractiveShell) -> list[str]:
     for code in ipython.user_ns["In"]:
         if not code:
             continue
-        if code.startswith("get_ipython().run_cell_magic('runit',"):
+        if code.startswith("get_ipython().run_cell_magic('comlrun',"):
             # Whitelist
             code_match = re.match(
-                r"get_ipython\(\).run_cell_magic\('runit', '', (.*)\)", code
+                r"get_ipython\(\).run_cell_magic\('comlrun', '', (.*)\)", code
             )
             if code_match is not None:
                 code = eval(code_match.group(1))
