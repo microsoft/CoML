@@ -195,7 +195,7 @@ class CoMLAgent:
 
     def static_check(
         self, code: str, context: GenerateContext | FixContext
-    ) -> tuple[bool, str]:
+    ) -> tuple[bool | None, str]:
         # Check the quality of code by looking at it (i.e., rubberduck)
         messages = [
             SystemMessage(content=CHECK_INSTRUCTION),
@@ -209,7 +209,7 @@ class CoMLAgent:
             return False, reason
         if "CORRECT" in last_line.upper():
             return True, reason
-        raise ValueError("Unable to parse the response.")
+        return None, response.content
 
     def output_sanity_check(
         self,
@@ -217,7 +217,7 @@ class CoMLAgent:
         context: GenerateContext | FixContext,
         error: str | None,
         output: str | None,
-    ) -> tuple[bool, str]:
+    ) -> tuple[bool | None, str]:
         # Run a sanity check of the output of the code
         messages = [
             SystemMessage(content=SANITY_CHECK_INSTRUCTION),
@@ -233,7 +233,7 @@ class CoMLAgent:
             return False, reason
         if "CORRECT" in last_line.upper():
             return True, reason
-        raise ValueError("Unable to parse the response.")
+        return None, response.content
 
     def visualization_check(
         self,
@@ -242,12 +242,20 @@ class CoMLAgent:
         svg_string: str,
         variable_descriptions: dict[str, str],
         source,
-    ) -> tuple[bool, list[tuple[bool, str]]]:
+    ) -> tuple[bool | None, list[tuple[bool | None, str]]]:
         vis_verifier = VisVerifier(self.llm, self)
         verifications = vis_verifier.verify(
             request, previous_code, svg_string, variable_descriptions, source
         )
-        pass_verify = all([verification["answer"] for verification in verifications])
+
+        answers = [verification["answer"] for verification in verifications]
+        if False in answers:
+            pass_verify = False
+        elif None in answers:
+            pass_verify = None
+        else:
+            pass_verify = True
+
         reason = []
         for verification in verifications:
             answer = verification["answer"]

@@ -66,6 +66,16 @@ details :last-child {
 </style>
 """
 
+VERIFY_STATUS_ICON = {
+    "error": "❌",
+    "warning": "⚠️",
+    "info": "ℹ️",
+    "ok": "✅",
+    None: "❔",
+    True: "✅",
+    False: "❌",
+}
+
 
 @magics_class
 class CoMLMagics(Magics):
@@ -265,14 +275,6 @@ class CoMLMagics(Magics):
             elif error or output:
                 display_names["sanity"] = "Output sanity check"
 
-            status_icon = {
-                "error": "❌",
-                "warning": "⚠️",
-                "info": "ℹ️",
-                "ok": "✅",
-                True: "✅",
-                False: "❌",
-            }
             loading = "<span class='loader'></span>"
             message_template = "<details><summary><b>{}:</b> {}</summary>\n{}</details>"
             for name in display_names:
@@ -285,7 +287,7 @@ class CoMLMagics(Magics):
                     display_names[name],
                     loading
                     if name not in statuses
-                    else status_icon[statuses[name]["result"]],
+                    else VERIFY_STATUS_ICON[statuses[name]["result"]],
                     detail_message,
                 )
 
@@ -318,14 +320,14 @@ class CoMLMagics(Magics):
                     visualization_check_details,
                 ) = self.agent.visualization_check(
                     context["request"],
-                    "\n".join(self._get_code_context()),
+                    "\n".join(context["codes"]),
                     output.replace("<image/svg+xml>", ""),
                     context["variables"],
                     vis_framework,
                 )
                 details = ""
                 for detail in visualization_check_details:
-                    details += ("✅" if detail[0] else "❌") + " " + detail[1] + "\n"
+                    details += VERIFY_STATUS_ICON[detail[0]] + " " + detail[1] + "\n"
                 result["vis"] = {
                     "result": visualization_check_result,
                     "details": details,

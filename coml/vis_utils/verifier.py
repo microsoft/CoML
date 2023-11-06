@@ -158,8 +158,9 @@ def answer_question(
         [previous_code],
     )
     code = generating_context["answer"]
-
     final_code = previous_code + "\n" + code
+    # do not show figure
+    final_code = final_code.replace("plt.show()", "")
     global_env = {"finding": None}
     try:
         exec(final_code, global_env)
@@ -607,9 +608,9 @@ def check_order(order: dict, chart_info: dict):
             if not is_sorted:
                 result["answer"] = False
 
-    result["rationale"] = f"Sort {order['channel']} in {order['order']} order."
+    result["rationale"] = f"{order['channel']} is sorted in {order['order']} order."
     if result["answer"] is False:
-        result["rationale"] = result["rationale"].replace("Sort", "Doesn't sort")
+        result["rationale"] = result["rationale"].replace("is sorted", "is not sorted")
 
     return result
 
@@ -627,7 +628,13 @@ class VisVerifier:
     def _add_verification(self, verification):
         self.verifications.append(verification)
         # display
-        answer = "✅" if verification["answer"] else "❌"
+        answer = ""
+        if verification["answer"] is True:
+            answer = "✅"
+        elif verification["answer"] is False:
+            answer = "❌"
+        elif verification["answer"] is None:
+            answer = "❔"
         aspect = verification["aspect"].capitalize()
         rationale = verification["rationale"]
         print(answer + " " + aspect + ": " + rationale)
@@ -642,7 +649,7 @@ class VisVerifier:
     ):
         self.verifications = []
         understand_fail_result = {
-            "answer": False,
+            "answer": None,
             "aspect": "Visualization understanding",
             "rationale": "Cannot understand the visualization.",
         }
@@ -658,7 +665,10 @@ class VisVerifier:
                 # STEP2: check chart type, data encoding and title
                 self.verify_chart_info(request, chart_info, variable_descriptions)
                 pass_verify = all(
-                    [verification["answer"] for verification in self.verifications]
+                    [
+                        verification["answer"] is True
+                        for verification in self.verifications
+                    ]
                 )
                 if pass_verify:
                     # STEP3: check visualization data
@@ -707,6 +717,22 @@ class VisVerifier:
         try:
             # STEP 1: Spot-Check
             data = chart_info["data"]
+            encoding = chart_info["encoding"]
+            # check label
+            for channel in encoding.keys():
+                if "title" not in encoding[channel]:
+                    verification = {
+                        "aspect": channel + " label",
+                        "answer": None,
+                        "rationale": "Channel "
+                        + channel
+                        + " is not labeled, so accurate understanding of the data on the graph is difficult.",
+                    }
+                    self._add_verification(verification)
+                    verifications.append(verification)
+            if len(verifications) > 0:
+                return verifications
+
             # random pick NUM_SAMPLE data points
             indexes = range(len(data))
             sampled_indexes = random.sample(indexes, NUM_SAMPLE)
@@ -737,11 +763,11 @@ class VisVerifier:
                     if verification:
                         self._add_verification(verification)
                         verifications.append(verification)
-                        if verification["answer"] is False:
+                        if verification["answer"] is not True:
                             break
 
             pass_verify = all(
-                [verification["answer"] for verification in verifications]
+                [verification["answer"] is True for verification in verifications]
             )
             if not pass_verify:
                 return verifications
