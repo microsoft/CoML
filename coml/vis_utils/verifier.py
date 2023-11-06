@@ -608,9 +608,9 @@ def check_order(order: dict, chart_info: dict):
             if not is_sorted:
                 result["answer"] = False
 
-    result["rationale"] = f"Sort {order['channel']} in {order['order']} order."
+    result["rationale"] = f"{order['channel']} is sorted in {order['order']} order."
     if result["answer"] is False:
-        result["rationale"] = result["rationale"].replace("Sort", "Doesn't sort")
+        result["rationale"] = result["rationale"].replace("is sorted", "is not sorted")
 
     return result
 
