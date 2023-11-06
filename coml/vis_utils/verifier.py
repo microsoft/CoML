@@ -767,10 +767,7 @@ class VisVerifier:
                             break
 
             pass_verify = all(
-                [
-                    verification["answer"] is True
-                    for verification in verifications
-                ]
+                [verification["answer"] is True for verification in verifications]
             )
             if not pass_verify:
                 return verifications
