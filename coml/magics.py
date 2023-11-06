@@ -66,6 +66,16 @@ details :last-child {
 </style>
 """
 
+VERIFY_STATUS_ICON = {
+    "error": "❌",
+    "warning": "⚠️",
+    "info": "ℹ️",
+    "ok": "✅",
+    None: "❔",
+    True: "✅",
+    False: "❌",
+}
+
 
 @magics_class
 class CoMLMagics(Magics):
@@ -253,18 +263,8 @@ class CoMLMagics(Magics):
             error, output = parse_cell_outputs(target_cell["outputs"])
             generated_vis = output and "<image/svg+xml>" in output
 
-        status_icon = {
-            "error": "❌",
-            "warning": "⚠️",
-            "info": "ℹ️",
-            "ok": "✅",
-            "unknown": "❔",
-            True: "✅",
-            False: "❌",
-        }
-
         def display_statuses(statuses):
-            # clear_output(wait=True)
+            clear_output(wait=True)
             html = VERIFY_STYLE + "\n"
             display_names = {
                 "lint": "PyLint",
@@ -287,7 +287,7 @@ class CoMLMagics(Magics):
                     display_names[name],
                     loading
                     if name not in statuses
-                    else status_icon[statuses[name]["result"]],
+                    else VERIFY_STATUS_ICON[statuses[name]["result"]],
                     detail_message,
                 )
 
@@ -327,7 +327,7 @@ class CoMLMagics(Magics):
                 )
                 details = ""
                 for detail in visualization_check_details:
-                    details += status_icon[detail[0]] + " " + detail[1] + "\n"
+                    details += VERIFY_STATUS_ICON[detail[0]] + " " + detail[1] + "\n"
                 result["vis"] = {
                     "result": visualization_check_result,
                     "details": details,

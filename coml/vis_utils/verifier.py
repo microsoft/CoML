@@ -616,11 +616,6 @@ def check_order(order: dict, chart_info: dict):
 
 
 NUM_SAMPLE = 3
-ANSWER_TYPE = {
-    "right": True,
-    "wrong": False,
-    "unknown": "unknown",
-}
 
 
 class VisVerifier:
@@ -634,11 +629,11 @@ class VisVerifier:
         self.verifications.append(verification)
         # display
         answer = ""
-        if verification["answer"] == ANSWER_TYPE["wrong"]:
-            answer = "❌"
-        elif verification["answer"] == ANSWER_TYPE["right"]:
+        if verification["answer"] is True:
             answer = "✅"
-        elif verification["answer"] == ANSWER_TYPE["unknown"]:
+        elif verification["answer"] is False:
+            answer = "❌"
+        elif verification["answer"] is None:
             answer = "❔"
         aspect = verification["aspect"].capitalize()
         rationale = verification["rationale"]
@@ -654,7 +649,7 @@ class VisVerifier:
     ):
         self.verifications = []
         understand_fail_result = {
-            "answer": ANSWER_TYPE["unknown"],
+            "answer": None,
             "aspect": "Visualization understanding",
             "rationale": "Cannot understand the visualization.",
         }
@@ -671,7 +666,7 @@ class VisVerifier:
                 self.verify_chart_info(request, chart_info, variable_descriptions)
                 pass_verify = all(
                     [
-                        verification["answer"] == ANSWER_TYPE["right"]
+                        verification["answer"] is True
                         for verification in self.verifications
                     ]
                 )
@@ -728,7 +723,7 @@ class VisVerifier:
                 if "title" not in encoding[channel]:
                     verification = {
                         "aspect": channel + " label",
-                        "answer": ANSWER_TYPE["unknown"],
+                        "answer": None,
                         "rationale": "Channel "
                         + channel
                         + " is not labeled, so accurate understanding of the data on the graph is difficult.",
@@ -768,12 +763,12 @@ class VisVerifier:
                     if verification:
                         self._add_verification(verification)
                         verifications.append(verification)
-                        if verification["answer"] != ANSWER_TYPE["right"]:
+                        if verification["answer"] is not True:
                             break
 
             pass_verify = all(
                 [
-                    verification["answer"] == ANSWER_TYPE["right"]
+                    verification["answer"] is True
                     for verification in verifications
                 ]
             )
