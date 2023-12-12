@@ -67,17 +67,27 @@ def parse_fix(response: str) -> tuple[str, str, str]:
 
 
 def parse_code(response: str) -> str:
-    match = re.search(r"```.*\n([\s\S]+?)\n```", response)
-    match2 = re.search(r"```.*\n([\s\S]+)", response)
-    if match is not None:
-        code = match.group(1)
-    elif match2 is not None:
-        code = match2.group(1)
-    else:
-        # Give up. Return whole response.
-        warnings.warn("Unable to parse the code from response.")
-        code = response
-    return code
+    patterns = [
+        r"```.*\n([\s\S]+?)\n```",
+        r"```.*\n([\s\S]+?)```",
+        r"```([\s\S]+?)```",
+        r"```.*\n([\s\S]+)",
+        r"```([\s\S]+)\n```",
+        r"```([\s\S]+)```",
+        r"(.*)",
+    ]
+    for index, pattern in enumerate(patterns):
+        match = re.search(pattern, response)
+        if match is not None:
+            if index > 0:
+                warnings.warn(
+                    f"Unable to parse the code perfectly from response. "
+                    f"Using pattern {pattern}."
+                )
+            return match.group(1)
+    # Give up. Return whole response.
+    warnings.warn("Unable to parse the code from response.")
+    return response
 
 
 class CoMLAgent:
