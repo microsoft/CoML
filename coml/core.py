@@ -111,13 +111,14 @@ class CoMLAgent:
             return context
 
     def generate_code(
-        self, request: str, variable_descriptions: dict[str, str], codes: list[str]
+        self, request: str, variable_descriptions: dict[str, str], codes: list[str],
+        num_shots: int | None = None,
     ) -> GenerateContext:
         fewshots = cached_generate_fewshots()
         messages: list[BaseMessage] = [
             SystemMessage(content=GENERATE_INSTRUCTION),
         ]
-        for shot in fewshots:
+        for shot in fewshots[:num_shots]:
             question, answer = render_generate_context(shot)
             messages.append(HumanMessage(content=question))
             if answer is not None:
