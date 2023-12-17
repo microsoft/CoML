@@ -41,9 +41,18 @@ PANDAS_DESCRIPTION_CONFIG: Any = dict(max_cols=10, max_colwidth=20, max_rows=10)
 MAXIMUM_LIST_ITEMS = 30
 
 
-def describe_variable(value: Any) -> str:
+def describe_variable(
+    value: Any,
+    pandas_description_config: Any | None = None,
+    maximum_list_items: int | None = None,
+) -> str:
     import numpy
     import pandas
+
+    if pandas_description_config is None:
+        pandas_description_config = PANDAS_DESCRIPTION_CONFIG
+    if maximum_list_items is None:
+        maximum_list_items = MAXIMUM_LIST_ITEMS
 
     if isinstance(value, numpy.ndarray):
         return "numpy.ndarray(shape={}, dtype={})".format(value.shape, value.dtype)
@@ -51,22 +60,22 @@ def describe_variable(value: Any) -> str:
         return "pandas.DataFrame(shape={}, columns={})\n{}".format(
             value.shape,
             describe_variable(value.columns.tolist()),
-            add_indent(value.to_string(**PANDAS_DESCRIPTION_CONFIG).rstrip()),
+            add_indent(value.to_string(**pandas_description_config).rstrip()),
         )
     elif isinstance(value, pandas.Series):
         return "pandas.Series(shape={})".format(value.shape)
     elif isinstance(value, list):
-        if len(value) > MAXIMUM_LIST_ITEMS:
+        if len(value) > maximum_list_items:
             return "[{}, ...]".format(
-                ", ".join(describe_variable(v) for v in value[:MAXIMUM_LIST_ITEMS])
+                ", ".join(describe_variable(v) for v in value[:maximum_list_items])
             )
         return "[{}]".format(", ".join(describe_variable(v) for v in value))
     elif isinstance(value, dict):
-        if len(value) > MAXIMUM_LIST_ITEMS:
+        if len(value) > maximum_list_items:
             return "{{{}, ...}}".format(
                 ", ".join(
                     f"{k}: {describe_variable(v)}"
-                    for k, v in list(value.items())[:MAXIMUM_LIST_ITEMS]
+                    for k, v in list(value.items())[:maximum_list_items]
                 )
             )
         return "{{{}}}".format(
