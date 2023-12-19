@@ -111,8 +111,12 @@ class CoMLAgent:
             return context
 
     def generate_code(
-        self, request: str, variable_descriptions: dict[str, str], codes: list[str],
+        self,
+        request: str,
+        variable_descriptions: dict[str, str],
+        codes: list[str],
         num_shots: int | None = None,
+        style: str | None = None,
     ) -> GenerateContext:
         fewshots = cached_generate_fewshots()
         messages: list[BaseMessage] = [
@@ -128,6 +132,19 @@ class CoMLAgent:
         )
         question, _ = render_generate_context(context)
         messages.append(HumanMessage(content=question))
+
+        if style == "gemini":
+            # Gemini doesn't support system message.
+            if len(messages) > 1 and isinstance(messages[1], HumanMessage):
+                messages[1] = HumanMessage(
+                    content=GENERATE_INSTRUCTION
+                    + "\n\n### Task begin ###\n\n"
+                    + messages[1].content
+                )
+                messages = messages[1:]
+            else:
+                messages[0] = HumanMessage(content=GENERATE_INSTRUCTION)
+
         debug_messages(*messages)
 
         response = self.llm(messages)
