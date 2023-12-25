@@ -345,7 +345,7 @@ Derive the answer step by step.
 
 
 def cached_generate_fewshots() -> list[GenerateContext]:
-    with open(Path(__file__).parent / "prompts/generate_fewshots.json") as f:
+    with open(Path(__file__).parent / "prompts/generate_fewshots_v2.json") as f:
         return json.load(f)
 
 
