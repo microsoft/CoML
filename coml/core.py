@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import re
 import warnings
-from typing import Any, cast
+from typing import Any, cast, Literal, Callable
 
 import colorama
 from langchain.chat_models.base import BaseChatModel
@@ -91,8 +91,34 @@ def parse_code(response: str) -> str:
 
 
 class CoMLAgent:
-    def __init__(self, llm: BaseChatModel):
+    """
+    CoML agent that accepts data science requests and generates code.
+
+    Attributes:
+        llm: The language model that generates responses.
+        prompt_version: The version of prompt to use (can be ``v1`` or ``v2``).
+        prompt_validation: A function that takes a list of messages and returns
+            whether the prompt is valid, which is useful for limiting the number of
+            tokens in the prompt.
+        num_examples: The number of examples to show in the prompt. It can be a
+            number between 0 and 1, interpreted as the percentage of examples to show.
+        message_style: Can be ``chatgpt`` in which system messages are shown, or
+            ``gemini`` in which only human and ai messages are shown.
+    """
+
+    def __init__(
+        self,
+        llm: BaseChatModel,
+        prompt_version: Literal["v1", "v2"] = "v2",
+        prompt_validation: Callable[[list[BaseMessage]], bool] | None = None,
+        num_examples: float = 1.0,
+        message_style: Literal["chatgpt", "gemini"] = "chatgpt",
+    ):
         self.llm = llm
+        self.prompt_version = prompt_version
+        self.prompt_validation = prompt_validation
+        self.num_examples = num_examples
+        self.message_style = message_style
 
     def _fix_context_from_any_context(
         self, context: GenerateContext | FixContext, **kwargs: Any
@@ -115,13 +141,13 @@ class CoMLAgent:
         request: str,
         variable_descriptions: dict[str, str],
         codes: list[str],
-        num_shots: int | None = None,
-        style: str | None = None,
     ) -> GenerateContext:
         fewshots = cached_generate_fewshots()
         messages: list[BaseMessage] = [
             SystemMessage(content=GENERATE_INSTRUCTION),
         ]
+
+        num_shots = max(int(len(fewshots) * self.num_examples), 1)
         for shot in fewshots[:num_shots]:
             question, answer = render_generate_context(shot)
             messages.append(HumanMessage(content=question))
@@ -133,22 +159,28 @@ class CoMLAgent:
         question, _ = render_generate_context(context)
         messages.append(HumanMessage(content=question))
 
-        if style == "gemini":
+        if self.message_style == "gemini":
             # Gemini doesn't support system message.
             if len(messages) > 1 and isinstance(messages[1], HumanMessage):
                 messages[1] = HumanMessage(
                     content=GENERATE_INSTRUCTION
                     + "\n\n### Task begin ###\n\n"
-                    + messages[1].content
+                    + cast(str, messages[1].content)
                 )
                 messages = messages[1:]
             else:
                 messages[0] = HumanMessage(content=GENERATE_INSTRUCTION)
 
+        if self.prompt_validation is not None and not self.prompt_validation(messages):
+            raise ValueError("Prompt validation failed.")
+
         debug_messages(*messages)
 
         response = self.llm(messages)
         debug_messages(response)
+
+        if not isinstance(response.content, str):
+            raise ValueError(f"Response is not a string: {response.content}")
         code = parse_code(response.content)
         return {**context, "answer": code}
 

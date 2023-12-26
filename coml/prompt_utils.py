@@ -196,7 +196,7 @@ def render_generate_context(
     else:
         answer = None
 
-    return code + variables + request, answer
+    return variables + code + request, answer
 
 
 def render_fix_context(context: FixContext) -> list[str]:
