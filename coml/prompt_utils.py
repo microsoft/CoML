@@ -5,12 +5,14 @@ import re
 import types
 from pathlib import Path
 from typing import Any, TypedDict, cast
+from typing_extensions import NotRequired
 
 
 class GenerateContextIncomplete(TypedDict):
     variables: dict[str, str]
     codes: list[str]
     request: str
+    rationale: NotRequired[str]
 
 
 class GenerateContext(GenerateContextIncomplete):
@@ -170,10 +172,12 @@ def render_ipython_cells(codes: list[str]) -> str:
 
 def render_generate_context(
     context: GenerateContext | GenerateContextIncomplete,
+    cot: bool = False,
+    context_order: str = "vcr",
 ) -> tuple[str, str | None]:
     if context["variables"]:
         variables = (
-            "Variables:\n\n"
+            "### Variables\n\n"
             + "".join(
                 f"{name}: {desc}\n" for name, desc in context["variables"].items()
             )
@@ -182,21 +186,33 @@ def render_generate_context(
     else:
         variables = "No variables available currently.\n\n"
     if context["codes"]:
-        code = "Executed code:\n\n" + render_ipython_cells(context["codes"]) + "\n"
+        code = "### Executed code\n\n" + render_ipython_cells(context["codes"]) + "\n"
     else:
         code = "No code has been executed yet.\n\n"
 
     if context["request"]:
-        request = "Request:\n" + context["request"].rstrip()
+        request = "### Request\n\n" + context["request"].rstrip()
     else:
         request = "User request is unclear."
 
+    if cot:
+        request += "\nLet's think it step by step."
+
+    contexts = {
+        "v": variables,
+        "c": code,
+        "r": request,
+    }
+    contexts = "\n\n".join([contexts[c].rstrip() for c in list(context_order)])
+
     if "answer" in context:
         answer = render_code(context["answer"])
+        if cot and "rationale" in context:
+            answer = context["rationale"].rstrip() + "\n\n" + answer
     else:
         answer = None
 
-    return variables + code + request, answer
+    return contexts, answer
 
 
 def render_fix_context(context: FixContext) -> list[str]:
@@ -309,10 +325,14 @@ GENERATE_INSTRUCTION = f"""You're an assistant of a data scientist. You're good 
 
 Instructions:
 
-- The generated code should be wrapped by ``` before and after it.
+- The generated code should be *one single code block* wrapped by ``` before and after it.
 - Import necessary libraries at the beginning. You can leverage the Python libraries such as `pandas`, `sklearn`, `matplotlib`, `seaborn`, and etc. to achieve user's request.
 - The output of a cell is the last statement of the code. Do not use `print` to output the result or `return` to return the result.
 - Do not overwrite or modify the variables provided by the user, unless the user has explicitly asked for it. For example, if the user has provided a DataFrame `df`, you should not reassign `df`, unless the user asks to modify `df` in-place.
+"""
+
+GENERATE_INSTRUCTION_COT = f"""{GENERATE_INSTRUCTION.rstrip()}
+- Think before you write. You should first understand the user's request, think about how to achieve it, and then write the code.
 """
 
 FIX_INSTRUCTION = f"""{GENERATE_INSTRUCTION.rstrip()}

@@ -7,7 +7,8 @@
       "# Compute the area\ndf[\"area\"] = df[\"width\"] * df[\"height\"]"
     ],
     "request": "Output the correlation between width and height.",
-    "answer": "df[\"width\"].corr(df[\"height\"])"
+    "answer": "df[\"width\"].corr(df[\"height\"])",
+    "rationale": "`df` has two columns: `width` and `height`. `.corr()` is the method to compute the correlation between two columns."
   },
   {
     "variables": {
@@ -18,7 +19,8 @@
       "# Add a column \"pass\" based on the grade\ndf[\"pass\"] = df[\"grade\"].apply(lambda x: x in [\"A\", \"B\", \"C\"])"
     ],
     "request": "Who are the top 3 students in the class?",
-    "answer": "df.sort_values(by=\"score\", ascending=False).head(3)[\"students\"].tolist()"
+    "answer": "df.sort_values(by=\"score\", ascending=False).head(3)[\"students\"].tolist()",
+    "rationale": "The top students are the ones with the highest scores. We can sort the DataFrame `df` by the `score` column and get the first 3 rows. Then we can get their names by selecting the `students` column and convert it to a list."
   },
   {
     "variables": {
@@ -28,7 +30,8 @@
       "# Convert the price to float inplace\ndf[\"price\"] = df[\"price\"].apply(lambda x: float(x.replace(\"$\", \"\").replace(\",\", \"\")))"
     ],
     "request": "Compare the average weight of surface products and macbook products?",
-    "answer": "\n# Import pandas as it seems unimported.\nimport pandas as pd\n\n# Create a new variable to avoid unintentional modifications to raw DataFrame.\ndf_product_weight = pd.DataFrame({\n    \"product\": df[\"product\"].apply(lambda x: \"Macbook\" if \"Macbook\" in x else \"Surface\"),\n    \"weight\": df[\"weight\"].apply(lambda x: float(x.replace(\" lbs\", \"\"))),\n})\ndf_product_weight.groupby(\"product\").mean()"
+    "answer": "\n# Import pandas as it seems unimported.\nimport pandas as pd\n\n# Create a new variable to avoid unintentional modifications to raw DataFrame.\ndf_product_weight = pd.DataFrame({\n    \"product\": df[\"product\"].apply(lambda x: \"Macbook\" if \"Macbook\" in x else \"Surface\"),\n    \"weight\": df[\"weight\"].apply(lambda x: float(x.replace(\" lbs\", \"\"))),\n})\ndf_product_weight.groupby(\"product\").mean()",
+    "rationale": "The average weights of each product series can be computed by grouping the DataFrame by the `product` column and compute the mean of the `weight` column. The product series can be extracted from the `product` column by checking its prefix. The weight can be converted to float by removing the `lbs` suffix. We should create a new variable to avoid unintentional modifications to the raw DataFrame. We need to import pandas as there is no import statement in the previous codes."
   },
   {
     "variables": {
@@ -39,7 +42,8 @@
       "# Compute the average price of each brand\ncars.groupby(\"brand\").mean()"
     ],
     "request": "Compute the total price of each owner's cars. Return a series with \"Owner\" as index and \"Price\" as value.",
-    "answer": "cars.merge(owners, on=\"model\").groupby(\"owner\").sum()[\"price\"].rename(\"Price\").rename_axis(\"Owner\")"
+    "answer": "cars.merge(owners, on=\"model\").groupby(\"owner\").sum()[\"price\"].rename(\"Price\").rename_axis(\"Owner\")",
+    "rationale": "We should merge the cars with the owners DataFrame on the `model` column, so that we can get the owner of each car. Then we can group the DataFrame by the `owner` column and compute the sum of the `price` column. The `price` column should be renamed to `Price` and the index should be renamed to `Owner` as required."
   },
   {
     "variables": {
@@ -47,6 +51,7 @@
     },
     "codes": [],
     "request": "Visualize the sales trend over years.",
-    "answer": "import matplotlib.pyplot as plt\nplt.plot(df[\"year\"], df[\"sales\"])"
+    "answer": "import matplotlib.pyplot as plt\nplt.plot(df[\"year\"], df[\"sales\"])",
+    "rationale": "We can use `matplotlib.pyplot` to plot the sales trend over years. Import `matplotlib.pyplot` as it has never been imported."
   }
 ]

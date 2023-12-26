@@ -14,6 +14,7 @@ from .prompt_utils import (
     EXPLAIN_INSTRUCTION,
     FIX_INSTRUCTION,
     GENERATE_INSTRUCTION,
+    GENERATE_INSTRUCTION_COT,
     SANITY_CHECK_INSTRUCTION,
     SUGGEST_INSTRUCTION,
     FixContext,
@@ -104,6 +105,9 @@ class CoMLAgent:
             number between 0 and 1, interpreted as the percentage of examples to show.
         message_style: Can be ``chatgpt`` in which system messages are shown, or
             ``gemini`` in which only human and ai messages are shown.
+        chain_of_thought: Whether to use chain of thought (COT) in the prompt.
+        context_order: The order of the context in the prompt. Default to ``vcr``.
+            ``v`` for variable descriptions, ``c`` for codes, ``r`` for request.
     """
 
     def __init__(
@@ -113,12 +117,18 @@ class CoMLAgent:
         prompt_validation: Callable[[list[BaseMessage]], bool] | None = None,
         num_examples: float = 1.0,
         message_style: Literal["chatgpt", "gemini"] = "chatgpt",
+        chain_of_thought: bool = False,
+        context_order: Literal[
+            "vcr", "cvr", "rvc", "rcv", "vr", "rv", "cr", "rc", "r"
+        ] = "vcr",
     ):
         self.llm = llm
         self.prompt_version = prompt_version
         self.prompt_validation = prompt_validation
         self.num_examples = num_examples
         self.message_style = message_style
+        self.chain_of_thought = chain_of_thought
+        self.context_order = context_order
 
     def _fix_context_from_any_context(
         self, context: GenerateContext | FixContext, **kwargs: Any
@@ -143,20 +153,27 @@ class CoMLAgent:
         codes: list[str],
     ) -> GenerateContext:
         fewshots = cached_generate_fewshots()
-        messages: list[BaseMessage] = [
-            SystemMessage(content=GENERATE_INSTRUCTION),
-        ]
+        messages: list[BaseMessage] = []
+
+        if self.chain_of_thought:
+            messages.append(SystemMessage(content=GENERATE_INSTRUCTION_COT))
+        else:
+            messages.append(SystemMessage(content=GENERATE_INSTRUCTION))
 
         num_shots = max(int(len(fewshots) * self.num_examples), 1)
         for shot in fewshots[:num_shots]:
-            question, answer = render_generate_context(shot)
+            question, answer = render_generate_context(
+                shot, cot=self.chain_of_thought, context_order=self.context_order
+            )
             messages.append(HumanMessage(content=question))
             if answer is not None:
                 messages.append(AIMessage(content=answer))
         context = GenerateContextIncomplete(
             variables=variable_descriptions, codes=codes, request=request
         )
-        question, _ = render_generate_context(context)
+        question, _ = render_generate_context(
+            context, cot=self.chain_of_thought, context_order=self.context_order
+        )
         messages.append(HumanMessage(content=question))
 
         if self.message_style == "gemini":
