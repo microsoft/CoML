@@ -216,13 +216,13 @@ class CoMLAgent:
             prev_context, error=error, output=output, hint=hint
         )
         for shot in fewshots + [context]:
-            interactions = render_fix_context(shot)
+            interactions = render_fix_context(shot, context_order=self.context_order)
             for index, interaction in enumerate(interactions):
                 if index % 2 == 0:
                     messages.append(HumanMessage(content=interaction))
                 else:
                     messages.append(AIMessage(content=interaction))
-        debug_messages(*messages[-2:])
+        debug_messages(*messages)
 
         response = self.llm(messages)
         debug_messages(response)

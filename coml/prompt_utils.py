@@ -215,7 +215,7 @@ def render_generate_context(
     return contexts, answer
 
 
-def render_fix_context(context: FixContext) -> list[str]:
+def render_fix_context(context: FixContext, context_order: str = "vcr") -> list[str]:
     all_interactions: list[str] = []
     task_begin = "### Task Start ###\n\n"
     if context["request"] is None:
@@ -225,7 +225,7 @@ def render_fix_context(context: FixContext) -> list[str]:
             + render_code(context["first_attempt"])
         )
     else:
-        first_request, _ = render_generate_context(context)  # type: ignore
+        first_request, _ = render_generate_context(context, context_order=context_order)  # type: ignore
         first_request = task_begin + first_request
         all_interactions += [first_request, render_code(context["first_attempt"])]
         interaction_prefix = ""
@@ -370,7 +370,7 @@ def cached_generate_fewshots() -> list[GenerateContext]:
 
 
 def cached_fix_fewshots() -> list[FixContext]:
-    with open(Path(__file__).parent / "prompts/fix_fewshots.json") as f:
+    with open(Path(__file__).parent / "prompts/fix_fewshots_v2.json") as f:
         return json.load(f)
 
 
