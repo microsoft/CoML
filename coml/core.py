@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import random
 import re
 import warnings
 from typing import Any, cast, Literal, Callable
@@ -108,6 +109,8 @@ class CoMLAgent:
         chain_of_thought: Whether to use chain of thought (COT) in the prompt.
         context_order: The order of the context in the prompt. Default to ``vcr``.
             ``v`` for variable descriptions, ``c`` for codes, ``r`` for request.
+        ensemble: Perform ``ensemble`` number of LLM calls and ensemble the results.
+        ensemble_shuffle: Shuffle the examples in the prompt before ensemble.
     """
 
     def __init__(
@@ -121,6 +124,8 @@ class CoMLAgent:
         context_order: Literal[
             "vcr", "cvr", "rvc", "rcv", "vr", "rv", "cr", "rc", "r"
         ] = "vcr",
+        ensemble: int | None = None,
+        ensemble_shuffle: bool = True,
     ):
         self.llm = llm
         self.prompt_version = prompt_version
@@ -129,6 +134,8 @@ class CoMLAgent:
         self.message_style = message_style
         self.chain_of_thought = chain_of_thought
         self.context_order = context_order
+        self.ensemble = ensemble
+        self.ensemble_shuffle = ensemble_shuffle
 
     def _fix_context_from_any_context(
         self, context: GenerateContext | FixContext, **kwargs: Any
@@ -145,6 +152,93 @@ class CoMLAgent:
             context = context.copy()
             context["interactions"].append(InteractionIncomplete(**kwargs))
             return context
+
+    def _pre_generation(self, messages: list[BaseMessage]) -> list[BaseMessage]:
+        if self.message_style == "gemini":
+            # Merge the first two messages.
+            if len(messages) > 1 and isinstance(messages[1], HumanMessage):
+                messages1_content = cast(str, messages[1].content)
+                if not messages1_content.startswith("### Task Start ###"):
+                    messages1_content = "### Task Start ###\n\n" + messages1_content
+                messages[1] = HumanMessage(
+                    content=cast(str, messages[0].content) + "\n\n" + messages1_content
+                )
+                messages = messages[1:]
+            else:
+                messages[0] = HumanMessage(content=cast(str, messages[0].content))
+
+        if self.prompt_validation is not None and not self.prompt_validation(messages):
+            raise ValueError("Prompt validation failed.")
+
+        return messages
+
+    def _ensemble_generate(self, messages: list[BaseMessage]) -> BaseMessage:
+        """Ensemble the result from multiple LLM calls."""
+
+        if not self.ensemble:
+            return self._generate(messages)
+
+        results: list[tuple[float, BaseMessage]] = []
+        for _ in range(self.ensemble):
+            if self.ensemble_shuffle and len(messages) > 2:
+                # Shuffle the examples
+                first_message = messages[0]
+                interactions = messages[1:]
+
+                start_indices = []
+                # Can be [Task A Human, AI, Human AI, Task B Human, AI]
+                for index, message in enumerate(interactions):
+                    if isinstance(message, HumanMessage) and cast(
+                        str, message.content
+                    ).startswith("### Task Start ###"):
+                        start_indices.append(index)
+
+                # Can be [Human, AI, Human AI]
+                if not start_indices:
+                    # Loosen the constraint and find all human messages
+                    start_indices = [
+                        index
+                        for index, message in enumerate(interactions)
+                        if isinstance(message, HumanMessage)
+                    ]
+
+                groups = [
+                    interactions[index:index_next]
+                    for index, index_next in zip(start_indices, start_indices[1:])
+                ]
+
+                # Shuffle the groups and combine them
+                random.shuffle(groups)
+                messages = (
+                    [first_message]
+                    + [message for group in groups for message in group]
+                    + interactions[start_indices[-1] :]
+                )
+
+            messages = self._pre_generation(messages)
+            result = self.llm.generate([messages], logprobs=True)
+            message = result.generations[0][0].message  # type: ignore
+            generation_info = result.generations[0][0].generation_info
+            if generation_info is None or "logprobs" not in generation_info:
+                raise ValueError("Logprobs not found in generation_info.")
+            logprobs = [
+                content["logprob"] for content in generation_info["logprobs"]["content"]
+            ]
+            if not logprobs:
+                mean_logprobs = float("-inf")
+            else:
+                mean_logprobs = sum(logprobs) / len(logprobs)
+
+            results.append((mean_logprobs, message))
+
+        results.sort(key=lambda x: x[0], reverse=True)
+
+        return results[0][1]
+
+    def _generate(self, messages: list[BaseMessage]) -> BaseMessage:
+        """Generate a response from the LLM."""
+        messages = self._pre_generation(messages)
+        return self.llm(messages)
 
     def generate_code(
         self,
@@ -176,24 +270,9 @@ class CoMLAgent:
         )
         messages.append(HumanMessage(content=question))
 
-        if self.message_style == "gemini":
-            # Gemini doesn't support system message.
-            if len(messages) > 1 and isinstance(messages[1], HumanMessage):
-                messages[1] = HumanMessage(
-                    content=GENERATE_INSTRUCTION
-                    + "\n\n### Task begin ###\n\n"
-                    + cast(str, messages[1].content)
-                )
-                messages = messages[1:]
-            else:
-                messages[0] = HumanMessage(content=GENERATE_INSTRUCTION)
-
-        if self.prompt_validation is not None and not self.prompt_validation(messages):
-            raise ValueError("Prompt validation failed.")
-
         debug_messages(*messages)
 
-        response = self.llm(messages)
+        response = self._ensemble_generate(messages)
         debug_messages(response)
 
         if not isinstance(response.content, str):
@@ -222,9 +301,10 @@ class CoMLAgent:
                     messages.append(HumanMessage(content=interaction))
                 else:
                     messages.append(AIMessage(content=interaction))
+
         debug_messages(*messages)
 
-        response = self.llm(messages)
+        response = self._ensemble_generate(messages)
         debug_messages(response)
         explanation, observation, code = parse_fix(response.content)
         if "THE CODE IS CORRECT." in observation:
@@ -253,7 +333,7 @@ class CoMLAgent:
             HumanMessage(content=human_message),
         ]
         debug_messages(*messages)
-        response = self.llm(messages)
+        response = self._generate(messages)
         suggestions = re.split(r"\d+\.\s+", response.content)
         suggestions = [s.strip().replace("\n", " ") for s in suggestions if s.strip()]
         debug_messages(response)
@@ -266,7 +346,7 @@ class CoMLAgent:
             HumanMessage(content=code),
         ]
         debug_messages(*messages)
-        response = self.llm(messages)
+        response = self._generate(messages)
         debug_messages(response)
         return response.content
 
@@ -279,7 +359,7 @@ class CoMLAgent:
             HumanMessage(content=render_check_context(code, context)),
         ]
         debug_messages(*messages)
-        response = self.llm(messages)
+        response = self._generate(messages)
         debug_messages(response)
         reason, last_line = response.content.rstrip().rsplit("\n", 1)
         if "INCORRECT" in last_line.upper():
@@ -303,7 +383,7 @@ class CoMLAgent:
             ),
         ]
         debug_messages(*messages)
-        response = self.llm(messages)
+        response = self._generate(messages)
         debug_messages(response)
         reason, last_line = response.content.rstrip().rsplit("\n", 1)
         if "INCORRECT" in last_line.upper():
