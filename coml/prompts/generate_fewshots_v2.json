@@ -8,7 +8,7 @@
     ],
     "request": "Output the correlation between width and height.",
     "answer": "df[\"width\"].corr(df[\"height\"])",
-    "rationale": "`df` has two columns: `width` and `height`. `.corr()` is the method to compute the correlation between two columns."
+    "rationale": "To find the correlation between the 'width' and 'height' columns in the DataFrame `df`, we can use the `corr()` method provided by pandas, which computes pairwise correlations of columns, excluding NA/null values. Since we are only interested in the correlation between two specific columns, we can isolate those two columns and then call the `corr()` method.\n\nThe steps to do this are as follows:\n\n1. Select the 'width' and 'height' columns from the DataFrame `df`.\n2. Call the `corr()` method on 'width' column, with 'height' column as its parameter.\n\nHere is the code to do this:"
   },
   {
     "variables": {
@@ -20,7 +20,7 @@
     ],
     "request": "Who are the top 3 students in the class?",
     "answer": "df.sort_values(by=\"score\", ascending=False).head(3)[\"students\"].tolist()",
-    "rationale": "The top students are the ones with the highest scores. We can sort the DataFrame `df` by the `score` column and get the first 3 rows. Then we can get their names by selecting the `students` column and convert it to a list."
+    "rationale": "To identify the top 3 students in the class, we need to follow these steps:\n\n1. **Sort the DataFrame:** We need to sort the DataFrame based on the 'score' column in descending order because the students with the highest scores are considered the top students.\n2. **Select the Top 3:** After sorting, we select the first three rows of the DataFrame, which will represent the top 3 students.\n3. **Extract Student Names:** Finally, we extract the 'students' column from these top 3 rows to get the names of the top students, and convert it to a list.\n\nGiven that the DataFrame is named `df`, here is how you can perform these steps in code:"
   },
   {
     "variables": {
@@ -31,7 +31,7 @@
     ],
     "request": "Compare the average weight of surface products and macbook products?",
     "answer": "\n# Import pandas as it seems unimported.\nimport pandas as pd\n\n# Create a new variable to avoid unintentional modifications to raw DataFrame.\ndf_product_weight = pd.DataFrame({\n    \"product\": df[\"product\"].apply(lambda x: \"Macbook\" if \"Macbook\" in x else \"Surface\"),\n    \"weight\": df[\"weight\"].apply(lambda x: float(x.replace(\" lbs\", \"\"))),\n})\ndf_product_weight.groupby(\"product\").mean()",
-    "rationale": "The average weights of each product series can be computed by grouping the DataFrame by the `product` column and compute the mean of the `weight` column. The product series can be extracted from the `product` column by checking its prefix. The weight can be converted to float by removing the `lbs` suffix. We should create a new variable to avoid unintentional modifications to the raw DataFrame. We need to import pandas as there is no import statement in the previous codes."
+    "rationale": "To compare the average weight of Surface products and MacBook products, we'll need to:\n\n1. Extract the weight as a numerical value from the \"weight\" column.\n2. Create a new column to classify each product as either 'Surface' or 'Macbook'.\n3. Use the `groupby` function to calculate the average weight for each product group.\n\nWe need to avoid unintentional modifications to the raw DataFrame, as the request didn't ask for in-place changes to the data."
   },
   {
     "variables": {
@@ -43,7 +43,7 @@
     ],
     "request": "Compute the total price of each owner's cars. Return a series with \"Owner\" as index and \"Price\" as value.",
     "answer": "cars.merge(owners, on=\"model\").groupby(\"owner\").sum()[\"price\"].rename(\"Price\").rename_axis(\"Owner\")",
-    "rationale": "We should merge the cars with the owners DataFrame on the `model` column, so that we can get the owner of each car. Then we can group the DataFrame by the `owner` column and compute the sum of the `price` column. The `price` column should be renamed to `Price` and the index should be renamed to `Owner` as required."
+    "rationale": "To compute the total price of each owner's cars, we need to follow these steps:\n\n1. Merge the `cars` DataFrame with the `owners` DataFrame on the \"model\" column to link each car's price with its owner.\n2. Group the merged DataFrame by the \"owner\" column.\n3. Sum the \"price\" column within each group to get the total price per owner.\n4. Return the resulting series with \"owner\" as index and the total \"price\" as value. The `price` column should be renamed to `Price` and the index should be renamed to `Owner` as required.\n\nLet's write the code to perform these steps:"
   },
   {
     "variables": {
@@ -52,6 +52,6 @@
     "codes": [],
     "request": "Visualize the sales trend over years.",
     "answer": "import matplotlib.pyplot as plt\nplt.plot(df[\"year\"], df[\"sales\"])",
-    "rationale": "We can use `matplotlib.pyplot` to plot the sales trend over years. Import `matplotlib.pyplot` as it has never been imported."
+    "rationale": "To visualize the sales trend over the years, we will create a line plot using `matplotlib.pyplot`. This type of plot is ideal for showing how sales figures have changed over time. Here's how we can do it:\n\n1. Import `matplotlib.pyplot` for plotting.\n2. Use the `plot` function to create a line plot with 'year' on the x-axis and 'sales' on the y-axis.\n\nLet me write the code for you."
   }
 ]
