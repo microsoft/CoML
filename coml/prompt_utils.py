@@ -288,12 +288,12 @@ def render_fix_context(context: FixContext, context_order: str = "vcr") -> list[
                 + interaction["observation"].rstrip()
                 + "\n\n"
             )
-            all_interactions.append(
-                explanation
-                + observation
-                + "The fixed code:\n\n"
-                + render_code(interaction["code"])
+            code_section = (
+                "The fixed code:\n\n" + render_code(interaction["code"])
+                if interaction["code"]
+                else ""
             )
+            all_interactions.append(explanation + observation + code_section)
 
     return all_interactions
 

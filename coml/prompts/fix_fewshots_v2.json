@@ -22,6 +22,27 @@
   },
   {
     "variables": {
+      "X_train": "numpy.ndarray(shape=(2, 3), dtype=float32)",
+      "y_train": "numpy.ndarray(shape=(2,), dtype=float32)"
+    },
+    "codes": [
+      "from sklearn.linear_model import LinearRegression"
+    ],
+    "request": "Fit a linear regression model to the training data.",
+    "first_attempt": "",
+    "interactions": [
+      {
+        "error": null,
+        "output": "LinearRegression()",
+        "hint": null,
+        "explanation": "1. `model = LinearRegression()`: This line of code creates a new linear regression model.\n2. `model.fit(X_train, y_train)`: This line of code fits the model to the training data.",
+        "observation": "THE CODE IS CORRECT.",
+        "code": ""
+      }
+    ]
+  },
+  {
+    "variables": {
       "a": "numpy.ndarray(shape=(5,), dtype=int64)",
       "b": "numpy.ndarray(shape=(5,), dtype=int64)"
     },
