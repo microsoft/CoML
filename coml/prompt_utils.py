@@ -269,7 +269,7 @@ def render_fix_context(context: FixContext, context_order: str = "vcr") -> list[
         else:
             hint = "- The user did not provide any hint.\n\n"
 
-        post_instruction = 'With the information above, please first explain the code line-by-line, and then observe what might be wrong. Finally, you should provide the fixed code. If you think the code is correct, you can simply write "THE CODE IS CORRECT." in the observation section.'
+        post_instruction = 'With the information above, please first explain the code line-by-line, and then observe what might be wrong. Finally, you should provide the fixed code. If you think the code is correct, you should first explain the code, and write "THE CODE IS CORRECT." (in upper case) in the observation section. The fixed code can be omitted.'
 
         all_interactions.append(instruction + error + output + hint + post_instruction)
 

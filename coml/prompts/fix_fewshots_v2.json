@@ -29,7 +29,7 @@
       "from sklearn.linear_model import LinearRegression"
     ],
     "request": "Fit a linear regression model to the training data.",
-    "first_attempt": "",
+    "first_attempt": "model = LinearRegression()\nmodel.fit(X_train, y_train)",
     "interactions": [
       {
         "error": null,
