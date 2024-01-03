@@ -269,7 +269,7 @@ def render_fix_context(context: FixContext, context_order: str = "vcr") -> list[
         else:
             hint = "- The user did not provide any hint.\n\n"
 
-        post_instruction = 'With the information above, please first explain the code line-by-line, and then observe what might be wrong. Finally, you should provide the fixed code. If you think the code is correct, you should first explain the code, and write "THE CODE IS CORRECT." (in upper case) in the observation section. The fixed code can be omitted.'
+        post_instruction = 'With the information above, please first explain the code line-by-line, and then observe what might be wrong. Finally, you should provide the fixed code. If you think the code is correct, please write "THE CODE IS CORRECT." in the observation section.'
 
         all_interactions.append(instruction + error + output + hint + post_instruction)
 
@@ -337,6 +337,7 @@ GENERATE_INSTRUCTION_COT = f"""{GENERATE_INSTRUCTION.rstrip()}
 
 FIX_INSTRUCTION = f"""{GENERATE_INSTRUCTION.rstrip()}
 - If the user thinks the generated code is problematic, you should help fix it. The user will provide you with the exception message (if any), the output of the code (if any), and a hint (if any). You should provide a line-by-line explanation of the code, and point out what is wrong with the code. You should also provide the fixed code.
+- If you think the provided problematic code is actually correct, you should first explain the code, and write "THE CODE IS CORRECT." (in upper case) in the observation section. The fixed code can be omitted.
 """
 
 SUGGEST_INSTRUCTION = """You're a data scientist. Given the code that has already been written, suggest three things that can be done next. Write the response in the following format:
