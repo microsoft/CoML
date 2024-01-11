@@ -108,6 +108,7 @@ class CoMLAgent:
             tokens in the prompt.
         num_examples: The number of examples to show in the prompt. It can be a
             number between 0 and 1, interpreted as the percentage of examples to show.
+            It can also be an integer, interpreted as the number of examples to show.
         message_style: Can be ``chatgpt`` in which system messages are shown, or
             ``gemini`` in which only human and ai messages are shown.
         chain_of_thought: Whether to use chain of thought (COT) in the prompt.
@@ -115,6 +116,8 @@ class CoMLAgent:
             ``v`` for variable descriptions, ``c`` for codes, ``r`` for request.
         ensemble: Perform ``ensemble`` number of LLM calls and ensemble the results.
         ensemble_shuffle: Shuffle the examples in the prompt before ensemble.
+        example_ranking: A model that ranks the examples. If provided, the examples
+            will be ranked by the model before selecting the examples.
     """
 
     def __init__(
@@ -122,7 +125,7 @@ class CoMLAgent:
         llm: BaseChatModel,
         prompt_version: Literal["v1", "v2"] = "v2",
         prompt_validation: Callable[[list[BaseMessage]], bool] | None = None,
-        num_examples: float = 1.0,
+        num_examples: float | int = 1.0,
         message_style: Literal["chatgpt", "gemini"] = "chatgpt",
         chain_of_thought: bool = False,
         context_order: Literal[
@@ -262,8 +265,11 @@ class CoMLAgent:
             similarities.sort(key=lambda x: x[0])
             fewshots = [shot for _, shot in similarities]
 
-        num_shots = max(int(len(fewshots) * self.num_examples), 1)
-        return fewshots[:num_shots]
+        if isinstance(self.num_examples, int):
+            return fewshots[:self.num_examples]
+        else:
+            num_shots = max(int(len(fewshots) * self.num_examples), 1)
+            return fewshots[:num_shots]
 
     def generate_code(
         self,

@@ -3,9 +3,12 @@ from __future__ import annotations
 import json
 import re
 import types
+import warnings
 from pathlib import Path
-from typing import Any, TypedDict, cast
+from typing import Any, TypedDict, Literal, cast
 from typing_extensions import NotRequired
+
+import pandas as pd
 
 
 class GenerateContextIncomplete(TypedDict):
@@ -39,6 +42,76 @@ class FixContext(TypedDict):
     interactions: list[InteractionIncomplete | Interaction]
 
 
+def lida_dataframe_describe(df: pd.DataFrame, n_samples: int) -> list[dict]:
+    """Get properties of each column in a pandas DataFrame, in which way used in LIDA."""
+
+    def check_type(dtype: str, value):
+        """Cast value to right type to ensure it is JSON serializable"""
+        if "float" in str(dtype):
+            return float(value)
+        elif "int" in str(dtype):
+            return int(value)
+        else:
+            return value
+
+    properties_list = []
+    for column in df.columns:
+        dtype = df[column].dtype
+        properties = {}
+        if dtype in [int, float, complex]:
+            properties["dtype"] = "number"
+            properties["std"] = check_type(dtype, df[column].std())
+            properties["min"] = check_type(dtype, df[column].min())
+            properties["max"] = check_type(dtype, df[column].max())
+
+        elif dtype == bool:
+            properties["dtype"] = "boolean"
+        elif dtype == object:
+            # Check if the string column can be cast to a valid datetime
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    pd.to_datetime(df[column], errors="raise")
+                    properties["dtype"] = "date"
+            except ValueError:
+                # Check if the string column has a limited number of values
+                if df[column].nunique() / len(df[column]) < 0.5:
+                    properties["dtype"] = "category"
+                else:
+                    properties["dtype"] = "string"
+        elif pd.api.types.is_categorical_dtype(df[column]):
+            properties["dtype"] = "category"
+        elif pd.api.types.is_datetime64_any_dtype(df[column]):
+            properties["dtype"] = "date"
+        else:
+            properties["dtype"] = str(dtype)
+
+        # add min max if dtype is date
+        if properties["dtype"] == "date":
+            try:
+                properties["min"] = df[column].min()
+                properties["max"] = df[column].max()
+            except TypeError:
+                cast_date_col = pd.to_datetime(df[column], errors="coerce")
+                properties["min"] = cast_date_col.min()
+                properties["max"] = cast_date_col.max()
+        # Add additional properties to the output dictionary
+        nunique = df[column].nunique()
+        if "samples" not in properties:
+            non_null_values = df[column][df[column].notnull()].unique()
+            n_samples = min(n_samples, len(non_null_values))
+            samples = (
+                pd.Series(non_null_values).sample(n_samples, random_state=42).tolist()
+            )
+            properties["samples"] = samples
+        properties["num_unique_values"] = nunique
+        # properties["semantic_type"] = ""
+        # properties["description"] = ""
+        properties_list.append({"column": column, "properties": properties})
+
+    return properties_list
+
+
 PANDAS_DESCRIPTION_CONFIG: Any = dict(max_cols=10, max_colwidth=20, max_rows=10)
 MAXIMUM_LIST_ITEMS = 30
 
@@ -47,6 +120,7 @@ def describe_variable(
     value: Any,
     pandas_description_config: Any | None = None,
     maximum_list_items: int | None = None,
+    dataframe_format: Literal["coml", "lida"] = "coml",
 ) -> str:
     import numpy
     import pandas
@@ -59,11 +133,19 @@ def describe_variable(
     if isinstance(value, numpy.ndarray):
         return "numpy.ndarray(shape={}, dtype={})".format(value.shape, value.dtype)
     elif isinstance(value, pandas.DataFrame):
-        return "pandas.DataFrame(shape={}, columns={})\n{}".format(
-            value.shape,
-            describe_variable(value.columns.tolist()),
-            add_indent(value.to_string(**pandas_description_config).rstrip()),
-        )
+        if dataframe_format == "coml":
+            return "pandas.DataFrame(shape={}, columns={})\n{}".format(
+                value.shape,
+                describe_variable(value.columns.tolist()),
+                add_indent(value.to_string(**pandas_description_config).rstrip()),
+            )
+        elif dataframe_format == "lida":
+            return "pandas.DataFrame(shape={}, columns={})".format(
+                value.shape,
+                lida_dataframe_describe(
+                    value, n_samples=pandas_description_config.get("max_rows", 10)
+                ),
+            )
     elif isinstance(value, pandas.Series):
         return "pandas.Series(shape={})".format(value.shape)
     elif isinstance(value, list):
