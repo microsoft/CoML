@@ -4,11 +4,13 @@ import copy
 import random
 import re
 import warnings
-from typing import Any, cast, Literal, Callable
+from typing import Any, cast, Literal, Callable, TypeVar
 
 import colorama
 from langchain.chat_models.base import BaseChatModel
+from langchain.embeddings.base import Embeddings
 from langchain.schema import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from scipy.spatial.distance import cosine as cosine_distance
 
 from .prompt_utils import (
     CHECK_INSTRUCTION,
@@ -34,6 +36,8 @@ from .prompt_utils import (
 from .vis_utils import VisVerifier
 
 _debug_mode: bool = False
+
+_Type = TypeVar("_Type")
 
 
 def debug_messages(*messages: BaseMessage) -> None:
@@ -126,6 +130,7 @@ class CoMLAgent:
         ] = "vcr",
         ensemble: int | None = None,
         ensemble_shuffle: bool = True,
+        example_ranking: Embeddings | None = None,
     ):
         self.llm = llm
         self.prompt_version = prompt_version
@@ -136,6 +141,7 @@ class CoMLAgent:
         self.context_order = context_order
         self.ensemble = ensemble
         self.ensemble_shuffle = ensemble_shuffle
+        self.example_ranking = example_ranking
 
     def _fix_context_from_any_context(
         self, context: GenerateContext | FixContext, **kwargs: Any
@@ -240,6 +246,25 @@ class CoMLAgent:
         messages = self._pre_generation(messages)
         return self.llm(messages)
 
+    def _select_examples(self, query: str, fewshots: list[_Type]) -> list[_Type]:
+        """Select examples from the fewshots."""
+        if self.num_examples == 0:
+            return []
+
+        if self.example_ranking is not None:
+            documents = [cast(Any, shot).get("request", "N/A") for shot in fewshots]
+            embeddings = self.example_ranking.embed_documents(documents)
+            query_embedding = self.example_ranking.embed_query(query)
+            similarities = [
+                (cosine_distance(query_embedding, embedding), shot)
+                for embedding, shot in zip(embeddings, fewshots)
+            ]
+            similarities.sort(key=lambda x: x[0])
+            fewshots = [shot for _, shot in similarities]
+
+        num_shots = max(int(len(fewshots) * self.num_examples), 1)
+        return fewshots[:num_shots]
+
     def generate_code(
         self,
         request: str,
@@ -254,8 +279,7 @@ class CoMLAgent:
         else:
             messages.append(SystemMessage(content=GENERATE_INSTRUCTION))
 
-        num_shots = max(int(len(fewshots) * self.num_examples), 1)
-        for shot in fewshots[:num_shots]:
+        for shot in self._select_examples(request, fewshots):
             question, answer = render_generate_context(
                 shot, cot=self.chain_of_thought, context_order=self.context_order
             )
@@ -288,6 +312,7 @@ class CoMLAgent:
         prev_context: GenerateContext | FixContext,
     ) -> FixContext | None:
         fewshots = cached_fix_fewshots()
+        fewshots = self._select_examples(prev_context["request"] or "N/A", fewshots)
         messages: list[BaseMessage] = [
             SystemMessage(content=FIX_INSTRUCTION),
         ]
