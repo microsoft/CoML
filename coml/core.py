@@ -257,7 +257,8 @@ class CoMLAgent:
         if self.example_ranking is not None:
             documents = [cast(Any, shot).get("request", "N/A") for shot in fewshots]
             embeddings = self.example_ranking.embed_documents(documents)
-            query_embedding = self.example_ranking.embed_query(query)
+            # Use embed_documents instead of embed_query because the latter has cache
+            query_embedding = self.example_ranking.embed_documents([query])[0]
             similarities = [
                 (cosine_distance(query_embedding, embedding), shot)
                 for embedding, shot in zip(embeddings, fewshots)
