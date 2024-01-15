@@ -56,6 +56,12 @@ def lida_dataframe_describe(df: pd.DataFrame, n_samples: int) -> list[dict]:
 
     properties_list = []
     for column in df.columns:
+        series = df[column]
+        if not isinstance(series, pd.Series):
+            properties_list.append(
+                {"column": column, "properties": {"dtype": "unknown"}}
+            )
+
         dtype = df[column].dtype
         properties = {}
         if dtype in [int, float, complex]:
