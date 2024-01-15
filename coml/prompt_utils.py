@@ -56,13 +56,15 @@ def lida_dataframe_describe(df: pd.DataFrame, n_samples: int) -> list[dict]:
 
     properties_list = []
     for column in df.columns:
-        if not hasattr(df[column], "dtype"):
+        try:
+            dtype = df[column].dtype
+        except AttributeError:
             # This can sometimes happen when the column is a dataframe by itself
             properties_list.append(
                 {"column": column, "properties": {"dtype": "unknown"}}
             )
+            continue
 
-        dtype = df[column].dtype
         properties = {}
         if dtype in [int, float, complex]:
             properties["dtype"] = "number"
