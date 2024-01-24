@@ -31,7 +31,9 @@
     ],
     "request": "Compare the average weight of surface products and macbook products?",
     "answer": "\n# Import pandas as it seems unimported.\nimport pandas as pd\n\n# Create a new variable to avoid unintentional modifications to raw DataFrame.\ndf_product_weight = pd.DataFrame({\n    \"product\": df[\"product\"].apply(lambda x: \"Macbook\" if \"Macbook\" in x else \"Surface\"),\n    \"weight\": df[\"weight\"].apply(lambda x: float(x.replace(\" lbs\", \"\"))),\n})\ndf_product_weight.groupby(\"product\").mean()",
-    "rationale": "To compare the average weight of Surface products and MacBook products, we'll need to:\n\n1. Extract the weight as a numerical value from the \"weight\" column.\n2. Create a new column to classify each product as either 'Surface' or 'Macbook'.\n3. Use the `groupby` function to calculate the average weight for each product group.\n\nWe need to avoid unintentional modifications to the raw DataFrame, as the request didn't ask for in-place changes to the data."
+    "rationale": "To compare the average weight of Surface products and MacBook products, we'll need to:\n\n1. Extract the weight as a numerical value from the \"weight\" column.\n2. Create a new column to classify each product as either 'Surface' or 'Macbook'.\n3. Use the `groupby` function to calculate the average weight for each product group.\n\nWe need to avoid unintentional modifications to the raw DataFrame, as the request didn't ask for in-place changes to the data.",
+    "answer_wo_intact": "# Import pandas as it seems unimported.\nimport pandas as pd\n\ndf[\"product\"] = df[\"product\"].apply(lambda x: \"Macbook\" if \"Macbook\" in x else \"Surface\")\ndf[\"weight\"] = df[\"weight\"].apply(lambda x: float(x.replace(\" lbs\", \"\")))\ndf.groupby(\"product\").mean()",
+    "rationale_wo_intact": "To compare the average weight of Surface products and MacBook products, we'll need to:\n\n1. Extract the weight as a numerical value from the \"weight\" column.\n2. Classify each product as either 'Surface' or 'Macbook'.\n3. Use the `groupby` function to calculate the average weight for each product group."
   },
   {
     "variables": {
