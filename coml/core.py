@@ -123,7 +123,7 @@ class CoMLAgent:
     def __init__(
         self,
         llm: BaseChatModel,
-        prompt_version: Literal["v1", "v2"] = "v2",
+        prompt_version: Literal["v1", "v2", "kaggle", "leetcode"] = "v2",
         prompt_validation: Callable[[list[BaseMessage]], bool] | None = None,
         num_examples: float | int = 1.0,
         message_style: Literal["chatgpt", "gemini"] = "chatgpt",
@@ -278,7 +278,7 @@ class CoMLAgent:
         variable_descriptions: dict[str, str],
         codes: list[str],
     ) -> GenerateContext:
-        fewshots = cached_generate_fewshots()
+        fewshots = cached_generate_fewshots(self.prompt_version)
         messages: list[BaseMessage] = []
 
         if self.chain_of_thought:
