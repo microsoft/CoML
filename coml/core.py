@@ -118,6 +118,8 @@ class CoMLAgent:
         ensemble_shuffle: Shuffle the examples in the prompt before ensemble.
         example_ranking: A model that ranks the examples. If provided, the examples
             will be ranked by the model before selecting the examples.
+        intact_instruction: Whether to instruct LLM to keep the variables unmodified.
+            For experimenting purposes only.
     """
 
     def __init__(
@@ -134,6 +136,7 @@ class CoMLAgent:
         ensemble: int | None = None,
         ensemble_shuffle: bool = True,
         example_ranking: Embeddings | None = None,
+        intact_instruction: bool = True,
     ):
         self.llm = llm
         self.prompt_version = prompt_version
@@ -145,6 +148,7 @@ class CoMLAgent:
         self.ensemble = ensemble
         self.ensemble_shuffle = ensemble_shuffle
         self.example_ranking = example_ranking
+        self.intact_instruction = intact_instruction
 
     def _fix_context_from_any_context(
         self, context: GenerateContext | FixContext, **kwargs: Any
@@ -282,9 +286,17 @@ class CoMLAgent:
         messages: list[BaseMessage] = []
 
         if self.chain_of_thought:
-            messages.append(SystemMessage(content=GENERATE_INSTRUCTION_COT))
+            generate_instruction = GENERATE_INSTRUCTION_COT
         else:
-            messages.append(SystemMessage(content=GENERATE_INSTRUCTION))
+            generate_instruction = GENERATE_INSTRUCTION
+        if not self.intact_instruction:
+            generate_instruction = re.sub(r"- Do not overwrite or modify.*\n", "", generate_instruction)
+            for shot in fewshots:
+                if "answer_wo_intact" in shot:
+                    shot["answer"] = shot.pop("answer_wo_intact")
+                if "rationale_wo_intact" in shot:
+                    shot["rationale"] = shot.pop("rationale_wo_intact")
+        messages.append(SystemMessage(content=generate_instruction))
 
         for shot in self._select_examples(request, fewshots):
             question, answer = render_generate_context(
