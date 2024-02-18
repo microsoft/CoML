@@ -285,9 +285,11 @@ class CoMLMagics(Magics):
                     )
                 html += message_template.format(
                     display_names[name],
-                    loading
-                    if name not in statuses
-                    else VERIFY_STATUS_ICON[statuses[name]["result"]],
+                    (
+                        loading
+                        if name not in statuses
+                        else VERIFY_STATUS_ICON[statuses[name]["result"]]
+                    ),
                     detail_message,
                 )
 

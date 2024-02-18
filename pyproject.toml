@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mlcopilot"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
   "click",
   "colorama",
@@ -109,7 +109,6 @@ before-build-python = ["jlpm clean:all"]
 line-length = 88
 target-version = ['py310']
 include = '\.pyi?$'
-packages = ["coml"]
 extend-exclude = '.+/(dist|.venv|venv|build)/.+'
 
 [tool.isort]

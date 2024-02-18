@@ -3,14 +3,19 @@ from __future__ import annotations
 import json
 import re
 import types
+import warnings
 from pathlib import Path
-from typing import Any, TypedDict, cast
+from typing import Any, Literal, TypedDict, cast
+
+import pandas as pd
+from typing_extensions import NotRequired
 
 
 class GenerateContextIncomplete(TypedDict):
     variables: dict[str, str]
     codes: list[str]
     request: str
+    rationale: NotRequired[str]
 
 
 class GenerateContext(GenerateContextIncomplete):
@@ -37,36 +42,132 @@ class FixContext(TypedDict):
     interactions: list[InteractionIncomplete | Interaction]
 
 
+def lida_dataframe_describe(df: pd.DataFrame, n_samples: int) -> list[dict]:
+    """Get properties of each column in a pandas DataFrame, in which way used in LIDA."""
+
+    def check_type(dtype: str, value):
+        """Cast value to right type to ensure it is JSON serializable"""
+        if "float" in str(dtype):
+            return float(value)
+        elif "int" in str(dtype):
+            return int(value)
+        else:
+            return value
+
+    properties_list = []
+    for column in df.columns:
+        try:
+            dtype = df[column].dtype
+        except AttributeError:
+            # This can sometimes happen when the column is a dataframe by itself
+            properties_list.append(
+                {"column": column, "properties": {"dtype": "unknown"}}
+            )
+            continue
+
+        properties = {}
+        if dtype in [int, float, complex]:
+            properties["dtype"] = "number"
+            properties["std"] = check_type(dtype, df[column].std())
+            properties["min"] = check_type(dtype, df[column].min())
+            properties["max"] = check_type(dtype, df[column].max())
+
+        elif dtype == bool:
+            properties["dtype"] = "boolean"
+        elif dtype == object:
+            # Check if the string column can be cast to a valid datetime
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    pd.to_datetime(df[column], errors="raise")
+                    properties["dtype"] = "date"
+            except ValueError:
+                # Check if the string column has a limited number of values
+                if df[column].nunique() / len(df[column]) < 0.5:
+                    properties["dtype"] = "category"
+                else:
+                    properties["dtype"] = "string"
+        elif pd.api.types.is_categorical_dtype(df[column]):
+            properties["dtype"] = "category"
+        elif pd.api.types.is_datetime64_any_dtype(df[column]):
+            properties["dtype"] = "date"
+        else:
+            properties["dtype"] = str(dtype)
+
+        # add min max if dtype is date
+        if properties["dtype"] == "date":
+            try:
+                properties["min"] = df[column].min()
+                properties["max"] = df[column].max()
+            except TypeError:
+                cast_date_col = pd.to_datetime(df[column], errors="coerce")
+                properties["min"] = cast_date_col.min()
+                properties["max"] = cast_date_col.max()
+        # Add additional properties to the output dictionary
+        nunique = df[column].nunique()
+        if "samples" not in properties:
+            non_null_values = df[column][df[column].notnull()].unique()
+            n_samples = min(n_samples, len(non_null_values))
+            samples = (
+                pd.Series(non_null_values).sample(n_samples, random_state=42).tolist()
+            )
+            properties["samples"] = samples
+        properties["num_unique_values"] = nunique
+        # properties["semantic_type"] = ""
+        # properties["description"] = ""
+        properties_list.append({"column": column, "properties": properties})
+
+    return properties_list
+
+
 PANDAS_DESCRIPTION_CONFIG: Any = dict(max_cols=10, max_colwidth=20, max_rows=10)
 MAXIMUM_LIST_ITEMS = 30
 
 
-def describe_variable(value: Any) -> str:
+def describe_variable(
+    value: Any,
+    pandas_description_config: Any | None = None,
+    maximum_list_items: int | None = None,
+    dataframe_format: Literal["coml", "lida"] = "coml",
+) -> str:
     import numpy
     import pandas
+
+    if pandas_description_config is None:
+        pandas_description_config = PANDAS_DESCRIPTION_CONFIG
+    if maximum_list_items is None:
+        maximum_list_items = MAXIMUM_LIST_ITEMS
 
     if isinstance(value, numpy.ndarray):
         return "numpy.ndarray(shape={}, dtype={})".format(value.shape, value.dtype)
     elif isinstance(value, pandas.DataFrame):
-        return "pandas.DataFrame(shape={}, columns={})\n{}".format(
-            value.shape,
-            describe_variable(value.columns.tolist()),
-            add_indent(value.to_string(**PANDAS_DESCRIPTION_CONFIG).rstrip()),
-        )
+        if dataframe_format == "coml":
+            return "pandas.DataFrame(shape={}, columns={})\n{}".format(
+                value.shape,
+                describe_variable(value.columns.tolist()),
+                add_indent(value.to_string(**pandas_description_config).rstrip()),
+            )
+        elif dataframe_format == "lida":
+            return "pandas.DataFrame(shape={}, columns={})".format(
+                value.shape,
+                lida_dataframe_describe(
+                    value, n_samples=pandas_description_config.get("max_rows", 10)
+                ),
+            )
     elif isinstance(value, pandas.Series):
         return "pandas.Series(shape={})".format(value.shape)
     elif isinstance(value, list):
-        if len(value) > MAXIMUM_LIST_ITEMS:
+        if len(value) > maximum_list_items:
             return "[{}, ...]".format(
-                ", ".join(describe_variable(v) for v in value[:MAXIMUM_LIST_ITEMS])
+                ", ".join(describe_variable(v) for v in value[:maximum_list_items])
             )
         return "[{}]".format(", ".join(describe_variable(v) for v in value))
     elif isinstance(value, dict):
-        if len(value) > MAXIMUM_LIST_ITEMS:
+        if len(value) > maximum_list_items:
             return "{{{}, ...}}".format(
                 ", ".join(
                     f"{k}: {describe_variable(v)}"
-                    for k, v in list(value.items())[:MAXIMUM_LIST_ITEMS]
+                    for k, v in list(value.items())[:maximum_list_items]
                 )
             )
         return "{{{}}}".format(
@@ -161,10 +262,12 @@ def render_ipython_cells(codes: list[str]) -> str:
 
 def render_generate_context(
     context: GenerateContext | GenerateContextIncomplete,
+    cot: bool = False,
+    context_order: str = "vcr",
 ) -> tuple[str, str | None]:
     if context["variables"]:
         variables = (
-            "Variables:\n\n"
+            "### Variables\n\n"
             + "".join(
                 f"{name}: {desc}\n" for name, desc in context["variables"].items()
             )
@@ -173,24 +276,36 @@ def render_generate_context(
     else:
         variables = "No variables available currently.\n\n"
     if context["codes"]:
-        code = "Executed code:\n\n" + render_ipython_cells(context["codes"]) + "\n"
+        code = "### Executed code\n\n" + render_ipython_cells(context["codes"]) + "\n"
     else:
         code = "No code has been executed yet.\n\n"
 
     if context["request"]:
-        request = "Request:\n" + context["request"].rstrip()
+        request = "### Request\n\n" + context["request"].rstrip()
     else:
         request = "User request is unclear."
 
+    if cot:
+        request += "\nLet's think it step by step."
+
+    contexts = {
+        "v": variables,
+        "c": code,
+        "r": request,
+    }
+    contexts = "\n\n".join([contexts[c].rstrip() for c in list(context_order)])
+
     if "answer" in context:
         answer = render_code(context["answer"])
+        if cot and "rationale" in context:
+            answer = context["rationale"].rstrip() + "\n\n" + answer
     else:
         answer = None
 
-    return code + variables + request, answer
+    return contexts, answer
 
 
-def render_fix_context(context: FixContext) -> list[str]:
+def render_fix_context(context: FixContext, context_order: str = "vcr") -> list[str]:
     all_interactions: list[str] = []
     task_begin = "### Task Start ###\n\n"
     if context["request"] is None:
@@ -200,7 +315,7 @@ def render_fix_context(context: FixContext) -> list[str]:
             + render_code(context["first_attempt"])
         )
     else:
-        first_request, _ = render_generate_context(context)  # type: ignore
+        first_request, _ = render_generate_context(context, context_order=context_order)  # type: ignore
         first_request = task_begin + first_request
         all_interactions += [first_request, render_code(context["first_attempt"])]
         interaction_prefix = ""
@@ -244,7 +359,7 @@ def render_fix_context(context: FixContext) -> list[str]:
         else:
             hint = "- The user did not provide any hint.\n\n"
 
-        post_instruction = 'With the information above, please first explain the code line-by-line, and then observe what might be wrong. Finally, you should provide the fixed code. If you think the code is correct, you can simply write "THE CODE IS CORRECT." in the observation section.'
+        post_instruction = 'With the information above, please first explain the code line-by-line, and then observe what might be wrong. Finally, you should provide the fixed code. If you think the code is correct, please write "THE CODE IS CORRECT." in the observation section.'
 
         all_interactions.append(instruction + error + output + hint + post_instruction)
 
@@ -263,12 +378,12 @@ def render_fix_context(context: FixContext) -> list[str]:
                 + interaction["observation"].rstrip()
                 + "\n\n"
             )
-            all_interactions.append(
-                explanation
-                + observation
-                + "The fixed code:\n\n"
-                + render_code(interaction["code"])
+            code_section = (
+                "The fixed code:\n\n" + render_code(interaction["code"])
+                if interaction["code"]
+                else ""
             )
+            all_interactions.append(explanation + observation + code_section)
 
     return all_interactions
 
@@ -300,14 +415,19 @@ GENERATE_INSTRUCTION = f"""You're an assistant of a data scientist. You're good 
 
 Instructions:
 
-- The generated code should be wrapped by ``` before and after it.
+- The generated code should be *one single code block* wrapped by ``` before and after it.
 - Import necessary libraries at the beginning. You can leverage the Python libraries such as `pandas`, `sklearn`, `matplotlib`, `seaborn`, and etc. to achieve user's request.
 - The output of a cell is the last statement of the code. Do not use `print` to output the result or `return` to return the result.
 - Do not overwrite or modify the variables provided by the user, unless the user has explicitly asked for it. For example, if the user has provided a DataFrame `df`, you should not reassign `df`, unless the user asks to modify `df` in-place.
 """
 
+GENERATE_INSTRUCTION_COT = f"""{GENERATE_INSTRUCTION.rstrip()}
+- Think before you write. You should first understand the user's request, think about how to achieve it, and then write the code.
+"""
+
 FIX_INSTRUCTION = f"""{GENERATE_INSTRUCTION.rstrip()}
 - If the user thinks the generated code is problematic, you should help fix it. The user will provide you with the exception message (if any), the output of the code (if any), and a hint (if any). You should provide a line-by-line explanation of the code, and point out what is wrong with the code. You should also provide the fixed code.
+- If you think the provided problematic code is actually correct, you should first explain the code, and write "THE CODE IS CORRECT." (in upper case) in the observation section. The fixed code can be omitted.
 """
 
 SUGGEST_INSTRUCTION = """You're a data scientist. Given the code that has already been written, suggest three things that can be done next. Write the response in the following format:
@@ -335,13 +455,15 @@ Derive the answer step by step.
 """
 
 
-def cached_generate_fewshots() -> list[GenerateContext]:
-    with open(Path(__file__).parent / "prompts/generate_fewshots.json") as f:
+def cached_generate_fewshots(prompt_version: str) -> list[GenerateContext]:
+    with open(
+        Path(__file__).parent / f"prompts/generate_fewshots_{prompt_version}.json"
+    ) as f:
         return json.load(f)
 
 
 def cached_fix_fewshots() -> list[FixContext]:
-    with open(Path(__file__).parent / "prompts/fix_fewshots.json") as f:
+    with open(Path(__file__).parent / "prompts/fix_fewshots_v2.json") as f:
         return json.load(f)
 
 
@@ -411,9 +533,9 @@ item_prices_df.sort_values(by='item_price', ascending=False)""",
     ]
 
     shot1 = extract_shot("../pandas_exercises/outputs/03-grouping-occupation.py", 3)
-    shot1[
-        "first_attempt"
-    ] = "(users[users['gender'] == 'M'].groupby('occupation').gender.count() / users.groupby('occupation').gender.count()).sort_values(ascending=False)"
+    shot1["first_attempt"] = (
+        "(users[users['gender'] == 'M'].groupby('occupation').gender.count() / users.groupby('occupation').gender.count()).sort_values(ascending=False)"
+    )
     shot1["interactions"] = [
         {
             "error": None,
