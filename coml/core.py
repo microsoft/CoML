@@ -4,7 +4,7 @@ import copy
 import random
 import re
 import warnings
-from typing import Any, cast, Literal, Callable, TypeVar
+from typing import Any, Callable, Literal, TypeVar, cast
 
 import colorama
 from langchain.chat_models.base import BaseChatModel
@@ -271,7 +271,7 @@ class CoMLAgent:
             fewshots = [shot for _, shot in similarities]
 
         if isinstance(self.num_examples, int):
-            return fewshots[:self.num_examples]
+            return fewshots[: self.num_examples]
         else:
             num_shots = max(int(len(fewshots) * self.num_examples), 1)
             return fewshots[:num_shots]
@@ -290,7 +290,9 @@ class CoMLAgent:
         else:
             generate_instruction = GENERATE_INSTRUCTION
         if not self.intact_instruction:
-            generate_instruction = re.sub(r"- Do not overwrite or modify.*\n", "", generate_instruction)
+            generate_instruction = re.sub(
+                r"- Do not overwrite or modify.*\n", "", generate_instruction
+            )
             for shot in fewshots:
                 if "answer_wo_intact" in shot:
                     shot["answer"] = shot.pop("answer_wo_intact")

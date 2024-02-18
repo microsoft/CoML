@@ -5,10 +5,10 @@ import re
 import types
 import warnings
 from pathlib import Path
-from typing import Any, TypedDict, Literal, cast
-from typing_extensions import NotRequired
+from typing import Any, Literal, TypedDict, cast
 
 import pandas as pd
+from typing_extensions import NotRequired
 
 
 class GenerateContextIncomplete(TypedDict):
@@ -456,7 +456,9 @@ Derive the answer step by step.
 
 
 def cached_generate_fewshots(prompt_version: str) -> list[GenerateContext]:
-    with open(Path(__file__).parent / f"prompts/generate_fewshots_{prompt_version}.json") as f:
+    with open(
+        Path(__file__).parent / f"prompts/generate_fewshots_{prompt_version}.json"
+    ) as f:
         return json.load(f)
 
 
