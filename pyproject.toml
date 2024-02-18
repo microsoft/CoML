@@ -109,7 +109,6 @@ before-build-python = ["jlpm clean:all"]
 line-length = 88
 target-version = ['py310']
 include = '\.pyi?$'
-packages = ["coml"]
 extend-exclude = '.+/(dist|.venv|venv|build)/.+'
 
 [tool.isort]

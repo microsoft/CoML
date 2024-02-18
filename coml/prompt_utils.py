@@ -533,9 +533,9 @@ item_prices_df.sort_values(by='item_price', ascending=False)""",
     ]
 
     shot1 = extract_shot("../pandas_exercises/outputs/03-grouping-occupation.py", 3)
-    shot1[
-        "first_attempt"
-    ] = "(users[users['gender'] == 'M'].groupby('occupation').gender.count() / users.groupby('occupation').gender.count()).sort_values(ascending=False)"
+    shot1["first_attempt"] = (
+        "(users[users['gender'] == 'M'].groupby('occupation').gender.count() / users.groupby('occupation').gender.count()).sort_values(ascending=False)"
+    )
     shot1["interactions"] = [
         {
             "error": None,
