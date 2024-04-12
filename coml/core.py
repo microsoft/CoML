@@ -18,6 +18,8 @@ from .prompt_utils import (
     FIX_INSTRUCTION,
     GENERATE_INSTRUCTION,
     GENERATE_INSTRUCTION_COT,
+    GENERATE_INSTRUCTION_VIS_MATPLOTLIB,
+    GENERATE_INSTRUCTION_VIS_SEABORN,
     SANITY_CHECK_INSTRUCTION,
     SUGGEST_INSTRUCTION,
     FixContext,
@@ -125,7 +127,9 @@ class CoMLAgent:
     def __init__(
         self,
         llm: BaseChatModel,
-        prompt_version: Literal["v1", "v2", "kaggle", "leetcode"] = "v2",
+        prompt_version: Literal[
+            "v1", "v2", "kaggle", "leetcode", "matplotlib", "seaborn"
+        ] = "v2",
         prompt_validation: Callable[[list[BaseMessage]], bool] | None = None,
         num_examples: float | int = 1.0,
         message_style: Literal["chatgpt", "gemini"] = "chatgpt",
@@ -298,6 +302,12 @@ class CoMLAgent:
                     shot["answer"] = shot.pop("answer_wo_intact")
                 if "rationale_wo_intact" in shot:
                     shot["rationale"] = shot.pop("rationale_wo_intact")
+
+        if self.prompt_version == "matplotlib":
+            generate_instruction = GENERATE_INSTRUCTION_VIS_MATPLOTLIB
+        elif self.prompt_version == "seaborn":
+            generate_instruction = GENERATE_INSTRUCTION_VIS_SEABORN
+
         messages.append(SystemMessage(content=generate_instruction))
 
         for shot in self._select_examples(request, fewshots):
