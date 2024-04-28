@@ -471,10 +471,10 @@ def cached_generate_fewshots(prompt_version: str) -> list[GenerateContext]:
     with open(
         Path(__file__).parent / f"prompts/generate_fewshots_{prompt_version}.json"
     ) as f:
-        if prompt_version in ["matplotlib", "seaborn"]:
-            fewshots = json.load(f)
-            for shot in fewshots:
-                variables = {}
+        fewshots = json.load(f)
+        for shot in fewshots:
+            variables = {}
+            if "datasets" in shot:
                 for name in shot["datasets"]:
                     dataset = pd.read_csv(
                         str(Path(__file__).parent / f"prompts/dataset/{name}.csv")
@@ -483,9 +483,8 @@ def cached_generate_fewshots(prompt_version: str) -> list[GenerateContext]:
                     variables[f"{name.split('/')[1]}_dataset"] = describe_variable(
                         dataset
                     )
-                shot["variables"] = variables
-                return fewshots
-        return json.load(f)
+            shot["variables"] = variables
+        return fewshots
 
 
 def cached_fix_fewshots() -> list[FixContext]:
