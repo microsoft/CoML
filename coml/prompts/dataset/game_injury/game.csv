@@ -1,0 +1,21 @@
+stadium_id,id,Season,Date,Home_team,Away_team,Score,Competition
+1,1,2007,18 May 2007,Quruvchi,Pakhtakor,1–1,League
+2,2,2007,22 September 2007,Pakhtakor,Quruvchi,0–0,League
+3,3,2007,9 December 2007,Pakhtakor,Quruvchi,0–0 (7:6),Cup
+4,4,2008,10 July 2008,Pakhtakor,Quruvchi,1–1,League
+5,5,2008,16 August 2008,Bunyodkor,Pakhtakor,1–1,League
+6,6,2008,31 October 2008,Bunyodkor,Pakhtakor,3–1,Cup
+7,7,2009,12 July 2009,Bunyodkor,Pakhtakor,2–1,League
+8,8,2009,14 October 2009,Pakhtakor,Bunyodkor,0–0,League
+9,9,2009,8 August 2009,Pakhtakor,Bunyodkor,1–0,Cup
+10,10,2010,14 March 2010,Bunyodkor,Pakhtakor,2–1,League
+10,11,2010,31 October 2010,Pakhtakor,Bunyodkor,0–0,League
+10,12,2011,7 July 2011,Pakhtakor,Bunyodkor,0–0,League
+1,13,2011,21 August 2011,Bunyodkor,Pakhtakor,2–1,League
+2,14,2012,11 March 2012,Bunyodkor,Pakhtakor,–,Supercup
+3,15,2012,26 June 2012,Bunyodkor,Pakhtakor,2–0,League
+4,16,2012,9 August 2012,Pakhtakor,Bunyodkor,1–1,League
+5,17,2012,22 August 2012,Bunyodkor,Pakhtakor,1–1,Cup
+11,18,2012,25 November 2012,Pakhtakor,Bunyodkor,1–3,Cup
+12,19,2013,30 June 2013,Pakhtakor,Bunyodkor,0–2,League
+7,20,2013,8 August 2013,Bunyodkor,Pakhtakor,1–2,League

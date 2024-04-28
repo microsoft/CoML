@@ -1,0 +1,47 @@
+[
+  {
+    "datasets": [
+      "scientist_1/Projects",
+      "scientist_1/AssignedTo"
+    ],
+    "codes": [
+      "import pandas as pd\nimport matplotlib.pyplot as plt",
+      "Projects_dataset = pd.read_csv('../dataset/scientist_1/Projects.csv')\nAssignedTo_dataset = pd.read_csv('../dataset/scientist_1/AssignedTo.csv')"
+    ],
+    "request": "What are the names of projects that require more than 300 hours, and how many scientists are assigned to each? Plot the result in a bar chart.",
+    "answer": "# Merge the two datasets on the project code\nmerged_data = pd.merge(Projects_dataset, AssignedTo_dataset, left_on='Code', right_on='Project')\n\n# Filter projects that require more than 300 hours\nfiltered_data = merged_data[merged_data['Hours'] > 300]\n\n# Count the number of scientists assigned to each project\nproject_counts = filtered_data['Name'].value_counts()\n\n# Plot a bar chart\nplt.figure(figsize=(10, 8))\nplt.bar(project_counts.index, project_counts.values)\nplt.xticks(rotation=5)\nplt.xlabel('Project Name')\nplt.ylabel('Number of Scientists')\nfrom matplotlib.ticker import MaxNLocator\nplt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))\nplt.title('Number of Scientists Assigned to Each Project')\nplt.show()"
+  },
+  {
+    "datasets": [
+      "coffee_shop/member"
+    ],
+    "codes": [
+      "import pandas as pd\nimport matplotlib.pyplot as plt",
+      "member = pd.read_csv('../dataset/coffee_shop/member.csv')"
+    ],
+    "request": "A scatter chart showing the correlation between the age of the customer and the time of purchase colored by membership level.",
+    "answer": "# Group the dataset by Membership_card\ngroups = member_dataset.groupby('Membership_card')\n\n# Create a scatter chart for each Membership_card\nfor membership_card, group in groups:\n    plt.scatter(group['Age'], group['Time_of_purchase'], label=membership_card)\n\n# Set the title and labels\nplt.title('Correlation between Age and Time of Purchase')\nplt.xlabel('Age')\nplt.ylabel('Time of Purchase')\nplt.legend(loc='upper left')\n\n# Show the plot\nplt.show()"
+  },
+  {
+    "datasets": [
+      "game_injury/game"
+    ],
+    "codes": [
+      "import pandas as pd\nimport matplotlib.pyplot as plt",
+      "game_dataset = pd.read_csv('../dataset/game_injury/game.csv')"
+    ],
+    "request": "Show the number of games in each season and group by away team in a group line chart. The x-axis is season.",
+    "answer": "# group the dataset by season and away team\ngrouped = game_dataset.groupby(['Season', 'Away_team']).size().reset_index(name='counts')\n\n# create a pivot table with season as index and away team as columns\npivot_table = pd.pivot_table(grouped, values='counts', index=['Season'], columns=['Away_team'], fill_value=0)\n\n# create the line chart\npivot_table.plot(kind='line')\n\n# set the title and labels\nplt.title('Number of Games in Each Season by Away Team')\nplt.xlabel('Season')\nplt.ylabel('Number of Games')\nfrom matplotlib.ticker import MaxNLocator\nplt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))\n\n# show the plot\nplt.show()"
+  },
+  {
+    "datasets": [
+      "pilot_record/pilot"
+    ],
+    "codes": [
+      "import pandas as pd\nimport matplotlib.pyplot as plt",
+      "pilot_dataset = pd.read_csv('../dataset/pilot_record/pilot.csv')"
+    ],
+    "request": "What is the proportion of positions of pilots? Show the result in a pie chart.",
+    "answer": "# Count the number of each position\nposition_counts = pilot_dataset['Position'].value_counts()\n\n# Create a pie chart\nplt.figure(figsize=(8,6))\nplt.pie(position_counts, labels = position_counts.index, autopct='%1.1f%%')\n\n# Set the title\nplt.title('Proportion of Positions')\n\n# Show the plot\nplt.show()"
+  }
+]

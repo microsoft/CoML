@@ -425,6 +425,18 @@ GENERATE_INSTRUCTION_COT = f"""{GENERATE_INSTRUCTION.rstrip()}
 - Think before you write. You should first understand the user's request, think about how to achieve it, and then write the code.
 """
 
+GENERATE_INSTRUCTION_VIS_MATPLOTLIB = f"""You're a helpful assistant proficient in writing Python code for data visualization. Upon receiving relevant context, such as available variables and any pre-executed code, your goal is to complete the Python code to generate a visualization that meets the user's request.
+
+Instructions:
+
+- Utilize the `matplotlib` library to create the visualization and ensure include `plt.show()` to display the chart.
+- You must return the generated code wrapped by ``` before and after it, and do not add any explanation.
+"""
+
+GENERATE_INSTRUCTION_VIS_SEABORN = GENERATE_INSTRUCTION_VIS_MATPLOTLIB.replace(
+    "matplotlib", "seaborn"
+)
+
 FIX_INSTRUCTION = f"""{GENERATE_INSTRUCTION.rstrip()}
 - If the user thinks the generated code is problematic, you should help fix it. The user will provide you with the exception message (if any), the output of the code (if any), and a hint (if any). You should provide a line-by-line explanation of the code, and point out what is wrong with the code. You should also provide the fixed code.
 - If you think the provided problematic code is actually correct, you should first explain the code, and write "THE CODE IS CORRECT." (in upper case) in the observation section. The fixed code can be omitted.
@@ -459,7 +471,20 @@ def cached_generate_fewshots(prompt_version: str) -> list[GenerateContext]:
     with open(
         Path(__file__).parent / f"prompts/generate_fewshots_{prompt_version}.json"
     ) as f:
-        return json.load(f)
+        fewshots = json.load(f)
+        for shot in fewshots:
+            variables = {}
+            if "datasets" in shot:
+                for name in shot["datasets"]:
+                    dataset = pd.read_csv(
+                        str(Path(__file__).parent / f"prompts/dataset/{name}.csv")
+                    )
+                    # todo: dataframe_format
+                    variables[f"{name.split('/')[1]}_dataset"] = describe_variable(
+                        dataset
+                    )
+            shot["variables"] = variables
+        return fewshots
 
 
 def cached_fix_fewshots() -> list[FixContext]:
