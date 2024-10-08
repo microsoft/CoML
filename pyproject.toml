@@ -4,11 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mlcopilot"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
   "click",
   "colorama",
   "langchain",
+  "langchain-community",
+  "langchain-openai",
   "numpy",
   "orjson",
   "pandas",
