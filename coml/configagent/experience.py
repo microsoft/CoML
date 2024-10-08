@@ -8,6 +8,7 @@ import numpy as np
 import orjson
 import pandas as pd
 from langchain.cache import InMemoryCache
+from langchain.globals import set_llm_cache
 from peewee import ModelSelect, fn
 
 from .constants import *
@@ -17,7 +18,7 @@ from .utils import format_config, get_llm
 SAVE_OPTIONS = orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_SERIALIZE_DATACLASS
 
 
-langchain.llm_cache = InMemoryCache()
+set_llm_cache(InMemoryCache())
 
 
 def ingest_experience(

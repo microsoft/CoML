@@ -14,7 +14,7 @@ from IPython.core.magic import (
     no_var_expand,
 )
 from IPython.display import HTML, Code, clear_output, display
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 
 from .core import CoMLAgent
 from .ipython_utils import (
